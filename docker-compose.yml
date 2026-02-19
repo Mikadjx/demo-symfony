@@ -7,7 +7,7 @@ services:
     container_name: symfony
     working_dir: /var/www/symfony
     volumes:
-      - /sandbox/workspace/demo-symfony:/var/www/symfony
+      - /sandbox/workspace/demo-comparaison/demo-symfony:/var/www/symfony
     restart: unless-stopped
     depends_on:
       - mysql
@@ -20,7 +20,7 @@ services:
     ports:
       - "8903:80"
     volumes:
-      - /sandbox/workspace/demo-symfony:/var/www/symfony:ro
+      - /sandbox/workspace/demo-comparaison/demo-symfony:/var/www/symfony:ro
       - /sandbox/workspace/demo-symfony/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
 
