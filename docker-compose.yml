@@ -6,7 +6,6 @@ services:
     image: php:8.4-fpm-alpine
     container_name: symfony
     working_dir: /var/www/symfony
-    network_mode: host
     volumes:
       - /sandbox/workspace/demo-comparaison/demo-symfony:/var/www/symfony
     restart: unless-stopped
@@ -16,7 +15,6 @@ services:
   nginx:
     image: nginx:alpine
     container_name: demo_symfony_nginx
-    network_mode: host
     depends_on:
       - php
     ports:
@@ -29,7 +27,6 @@ services:
   mysql:
     image: mysql:8.0
     container_name: mysql
-    network_mode: host
     environment:
       - MYSQL_ROOT_PASSWORD=root123456
       - MYSQL_PASSWORD=demo123456
@@ -43,7 +40,6 @@ services:
 
   phpmyadmin:
     image: phpmyadmin
-    network_mode: host
     container_name: phpmyadmin
     environment:
       - PMA_HOST=mysql
