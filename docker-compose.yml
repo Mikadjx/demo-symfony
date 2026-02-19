@@ -28,7 +28,7 @@ services:
       - MYSQL_DATABASE=demo
       - MYSQL_USER=demo
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - demo_data:/var/lib/mysql
     restart: unless-stopped
