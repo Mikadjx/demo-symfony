@@ -1,0 +1,26 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content %}
+<div style="padding: 2rem;">
+    <h1 style="color: #cc0000;">💀 Tableau de bord</h1>
+    <p style="color: #aaa;">Bienvenue dans l'espace d'administration de La Petite Maison de l'Épouvante.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 2rem;">
+        <div style="background: #1a1a1a; border: 1px solid #8b0000; border-radius: 8px; padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2.5rem;">🧟</div>
+            <h3 style="color: #fff; margin: 0.5rem 0;">Produits</h3>
+            <a href="{{ path('admin_product_index') }}" style="color: #cc0000;">Gérer →</a>
+        </div>
+        <div style="background: #1a1a1a; border: 1px solid #8b0000; border-radius: 8px; padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2.5rem;">👤</div>
+            <h3 style="color: #fff; margin: 0.5rem 0;">Utilisateurs</h3>
+            <a href="{{ path('admin_user_index') }}" style="color: #cc0000;">Gérer →</a>
+        </div>
+        <div style="background: #1a1a1a; border: 1px solid #8b0000; border-radius: 8px; padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2.5rem;">🌐</div>
+            <h3 style="color: #fff; margin: 0.5rem 0;">Site public</h3>
+            <a href="{{ path('app_home') }}" style="color: #cc0000;">Voir →</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
