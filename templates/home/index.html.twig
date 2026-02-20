@@ -6,12 +6,13 @@
 
 <!-- NAVBAR -->
 <nav class="navbar">
-  <div class="navbar-brand">
+  <a href="{{ path('app_home') }}" class="navbar-brand">
     <span class="skull">💀</span> La Petite Maison de l'Épouvante
-  </div>
+  </a>
   <ul class="navbar-links">
     <li><a href="{{ path('app_home') }}">Accueil</a></li>
-    <li><a href="{{ path('api_products_list') }}">Catalogue</a></li>
+    <li><a href="{{ path('app_product_index') }}">Catalogue</a></li>
+    {# <li><a href="{{ path('product_index') }}">Admin</a></li> #}
   </ul>
 </nav>
 
@@ -29,20 +30,22 @@
   <h2>Nos Produits</h2>
   <div class="products-grid">
     {% for product in products %}
-    <div class="card">
-      <div class="card-category">{{ product.category }}</div>
-      <h3 class="card-title">{{ product.name }}</h3>
-      <p class="card-desc">{{ product.description }}</p>
-      <div class="card-footer">
-        <span class="card-price">{{ product.price }} €</span>
-        <span class="card-stock 
-          {% if product.stock > 10 %}stock-ok
-          {% elseif product.stock > 0 %}stock-low
-          {% else %}stock-empty{% endif %}">
-          {% if product.stock > 0 %}En stock ({{ product.stock }}){% else %}Rupture{% endif %}
-        </span>
+    <a href="{{ path('app_product_index', {id: product.id}) }}" class="card-link">
+      <div class="card">
+        <div class="card-category">{{ product.category }}</div>
+        <h3 class="card-title">{{ product.name }}</h3>
+        <p class="card-desc">{{ product.description }}</p>
+        <div class="card-footer">
+          <span class="card-price">{{ product.price }} €</span>
+          <span class="
+            {% if product.stock > 10 %}stock-ok
+            {% elseif product.stock > 0 %}stock-low
+            {% else %}stock-empty{% endif %}">
+            {% if product.stock > 0 %}En stock ({{ product.stock }}){% else %}Rupture{% endif %}
+          </span>
+        </div>
       </div>
-    </div>
+    </a>
     {% endfor %}
   </div>
 </section>
@@ -50,7 +53,7 @@
 <!-- FOOTER -->
 <footer class="footer">
   <div class="footer-content">
-    <p>💀 La Petite Maison de l'Épouvante © 2025</p>
+    <p>💀 La Petite Maison de l'Épouvante © 2026</p>
     <p>Angoulême • Aix-en-Provence • Lyon • Londres</p>
   </div>
 </footer>

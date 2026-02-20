@@ -23,21 +23,4 @@ class HomeController extends AbstractController
             'products' => $products,
         ]);
     }
-
-    #[Route('/products/{id}', name: 'app_product')]
-    public function product(int $id): Response
-    {
-        $product = $this->productRepository->find($id);
-
-        if (!$product) {
-            throw $this->createNotFoundException("Produit $id introuvable.");
-        }
-
-        $recommendations = $this->recommendationService->getRecommendations($product);
-
-        return $this->render('home/product.html.twig', [
-            'product'         => $product,
-            'recommendations' => $recommendations,
-        ]);
-    }
 }

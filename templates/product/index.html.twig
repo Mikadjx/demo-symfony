@@ -1,107 +1,68 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ product.name }} - La Petite Maison de l'Épouvante{% endblock %}
+{% block title %}Gestion des Produits{% endblock %}
 
 {% block body %}
 
-<!-- NAVBAR -->
 <nav class="navbar">
   <a href="{{ path('app_home') }}" class="navbar-brand">
     <span class="skull">💀</span> La Petite Maison de l'Épouvante
   </a>
   <ul class="navbar-links">
     <li><a href="{{ path('app_home') }}">Accueil</a></li>
-    <li><a href="{{ path('app_home') }}">Catalogue</a></li>
+    {# <li><a href="{{ path('product_index') }}">Admin</a></li> #}
   </ul>
 </nav>
 
-<!-- PRODUCT DETAIL -->
-<section class="product-detail">
-  <div class="product-container">
+<section class="crud-section">
+  <div class="crud-header">
+    <h1>🗂 Gestion des Produits</h1>
+    <a href="{{ path('app_product_new') }}" class="btn btn-primary">+ Nouveau produit</a>
+  </div>
 
-    <div class="product-breadcrumb">
-      <a href="{{ path('app_home') }}">Accueil</a>
-      <span>›</span>
-      <span>{{ product.category }}</span>
-      <span>›</span>
-      <span>{{ product.name }}</span>
-    </div>
-
-    <div class="product-main">
-      <div class="product-image">
-        <div class="product-image-placeholder">
-          {% if product.category == 'figurines' %}🧟
-          {% elseif product.category == 'blu-ray' %}📀
-          {% elseif product.category == 'fanzine' %}📖
-          {% elseif product.category == 'jeux' %}🎲
-          {% else %}💀{% endif %}
-        </div>
-      </div>
-
-      <div class="product-info">
-        <div class="product-category-tag">{{ product.category }}</div>
-        <h1 class="product-name">{{ product.name }}</h1>
-        <p class="product-description">{{ product.description }}</p>
-
-        <div class="product-price-block">
-          <span class="product-price">{{ product.price }} €</span>
+  <table class="crud-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nom</th>
+        <th>Catégorie</th>
+        <th>Prix</th>
+        <th>Stock</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for product in products %}
+      <tr>
+        <td>{{ product.id }}</td>
+        <td>{{ product.name }}</td>
+        <td>{{ product.category }}</td>
+        <td>{{ product.price }} €</td>
+        <td>
           <span class="
             {% if product.stock > 10 %}stock-ok
             {% elseif product.stock > 0 %}stock-low
             {% else %}stock-empty{% endif %}">
-            {% if product.stock > 0 %}
-              ✓ En stock ({{ product.stock }} disponibles)
-            {% else %}
-              ✗ Rupture de stock
-            {% endif %}
+            {{ product.stock }}
           </span>
-        </div>
-
-        {% if product.stock > 0 %}
-          <button class="btn-add-cart">Ajouter au panier</button>
-        {% else %}
-          <button class="btn-add-cart disabled" disabled>Indisponible</button>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- RECOMMENDATIONS -->
-{% if recommendations is not empty %}
-<section class="recommendations">
-  <div class="products-section">
-    <h2>Vous aimerez aussi</h2>
-    <div class="products-grid">
-      {% for item in recommendations %}
-      <a href="{{ path('app_product', {id: item.id}) }}" class="card-link">
-        <div class="card">
-          <div class="card-category">{{ item.category }}</div>
-          <h3 class="card-title">{{ item.name }}</h3>
-          <p class="card-desc">{{ item.description }}</p>
-          <div class="card-footer">
-            <span class="card-price">{{ item.price }} €</span>
-            <span class="
-              {% if item.stock > 10 %}stock-ok
-              {% elseif item.stock > 0 %}stock-low
-              {% else %}stock-empty{% endif %}">
-              {% if item.stock > 0 %}En stock{% else %}Rupture{% endif %}
-            </span>
-          </div>
-        </div>
-      </a>
+        </td>
+        <td style="display:flex; gap:0.5rem;">
+          <a href="{{ path('app_product_show', {'id': product.id}) }}" class="btn btn-secondary">Voir</a>
+          <a href="{{ path('app_product_edit', {'id': product.id}) }}" class="btn btn-warning">Éditer</a>
+          {{ include('product/_delete_form.html.twig') }}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" style="text-align:center; color:#666;">Aucun produit trouvé</td>
+      </tr>
       {% endfor %}
-    </div>
-  </div>
+    </tbody>
+  </table>
 </section>
-{% endif %}
 
-<!-- FOOTER -->
 <footer class="footer">
-  <div class="footer-content">
-    <p>💀 La Petite Maison de l'Épouvante © 2026</p>
-    <p>Angoulême • Aix-en-Provence • Lyon • Londres</p>
-  </div>
+  <p>💀 La Petite Maison de l'Épouvante © 2025</p>
 </footer>
 
 {% endblock %}

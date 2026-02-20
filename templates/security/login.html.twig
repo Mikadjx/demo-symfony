@@ -1,0 +1,71 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Connexion — La Petite Maison de l'Épouvante{% endblock %}
+
+{% block body %}
+
+<nav class="navbar">
+  <a href="{{ path('app_home') }}" class="navbar-brand">
+    <span class="skull">💀</span> La Petite Maison de l'Épouvante
+  </a>
+  <ul class="navbar-links">
+    <li><a href="{{ path('app_home') }}">Accueil</a></li>
+    <li><a href="{{ path('app_catalogue') }}">Catalogue</a></li>
+  </ul>
+</nav>
+
+<section class="login-section">
+  <div class="login-box">
+
+    <div class="login-header">
+      <span class="login-skull">💀</span>
+      <h1>Espace Admin</h1>
+      <p>Accès réservé aux gestionnaires</p>
+    </div>
+
+    {% if error %}
+      <div class="alert alert-danger">
+        {{ error.messageKey|trans(error.messageData, 'security') }}
+      </div>
+    {% endif %}
+
+    <form method="post">
+      <div class="form-group">
+        <label for="inputEmail">Email</label>
+        <input type="email" id="inputEmail" name="_username"
+               value="{{ last_username }}"
+               placeholder="votre@email.com"
+               autocomplete="email" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword">Mot de passe</label>
+        <input type="password" id="inputPassword" name="_password"
+               placeholder="••••••••"
+               autocomplete="current-password" required>
+      </div>
+
+      <div class="form-check">
+        <input type="checkbox" id="remember_me" name="_remember_me">
+        <label for="remember_me">Se souvenir de moi</label>
+      </div>
+
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+      <button type="submit" class="btn btn-primary login-btn">
+        Connexion →
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <a href="{{ path('app_home') }}">← Retour au site</a>
+    </div>
+
+  </div>
+</section>
+
+<footer class="footer">
+  <p>💀 La Petite Maison de l'Épouvante © 2026</p>
+</footer>
+
+{% endblock %}

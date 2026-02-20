@@ -1,0 +1,65 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block body %}
+
+<nav class="navbar">
+  <a href="{{ path('app_home') }}" class="navbar-brand">
+    <span class="skull">💀</span> La Petite Maison de l'Épouvante
+  </a>
+  <ul class="navbar-links">
+    <li><a href="{{ path('app_home') }}">Accueil</a></li>
+    <li><a href="{{ path('product_index') }}">Admin</a></li>
+  </ul>
+</nav>
+
+<section class="crud-section">
+  <div class="crud-header">
+    <h1>{{ product.name }}</h1>
+    <a href="{{ path('product_index') }}" class="btn btn-secondary">← Retour</a>
+  </div>
+
+  <div class="show-card">
+    <div class="show-field">
+      <span class="show-label">ID</span>
+      <span class="show-value">{{ product.id }}</span>
+    </div>
+    <div class="show-field">
+      <span class="show-label">Nom</span>
+      <span class="show-value">{{ product.name }}</span>
+    </div>
+    <div class="show-field">
+      <span class="show-label">Description</span>
+      <span class="show-value">{{ product.description }}</span>
+    </div>
+    <div class="show-field">
+      <span class="show-label">Prix</span>
+      <span class="show-value">{{ product.price }} €</span>
+    </div>
+    <div class="show-field">
+      <span class="show-label">Catégorie</span>
+      <span class="show-value">{{ product.category }}</span>
+    </div>
+    <div class="show-field">
+      <span class="show-label">Stock</span>
+      <span class="show-value
+        {% if product.stock > 10 %} stock-ok
+        {% elseif product.stock > 0 %} stock-low
+        {% else %} stock-empty{% endif %}">
+        {{ product.stock }}
+      </span>
+    </div>
+
+    <div class="show-actions">
+      <a href="{{ path('product_edit', {'id': product.id}) }}" class="btn btn-warning">✏️ Éditer</a>
+      {{ include('product/_delete_form.html.twig') }}
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>💀 La Petite Maison de l'Épouvante © 2026</p>
+</footer>
+
+{% endblock %}

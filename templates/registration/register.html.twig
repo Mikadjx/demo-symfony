@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Inscription — La Petite Maison de l'Épouvante{% endblock %}
+
+{% block body %}
+
+<nav class="navbar">
+  <a href="{{ path('app_home') }}" class="navbar-brand">
+    <span class="skull">💀</span> La Petite Maison de l'Épouvante
+  </a>
+  <ul class="navbar-links">
+    <li><a href="{{ path('app_home') }}">Accueil</a></li>
+    <li><a href="{{ path('app_catalogue') }}">Catalogue</a></li>
+    <li><a href="{{ path('app_login') }}">Connexion</a></li>
+  </ul>
+</nav>
+
+<section class="login-section">
+  <div class="login-box">
+
+    <div class="login-header">
+      <span class="login-skull">💀</span>
+      <h1>Créer un compte</h1>
+      <p>Rejoignez l'univers de l'épouvante</p>
+    </div>
+
+    {{ form_errors(registrationForm) }}
+
+    {{ form_start(registrationForm) }}
+
+      <div class="form-group">
+        {{ form_label(registrationForm.email) }}
+        {{ form_widget(registrationForm.email, {'attr': {'placeholder': 'votre@email.com'}}) }}
+        {{ form_errors(registrationForm.email) }}
+      </div>
+
+      <div class="form-group">
+        {{ form_label(registrationForm.plainPassword) }}
+        {{ form_widget(registrationForm.plainPassword, {'attr': {'placeholder': '••••••••'}}) }}
+        {{ form_errors(registrationForm.plainPassword) }}
+      </div>
+
+      <div class="form-check">
+        {{ form_widget(registrationForm.agreeTerms) }}
+        {{ form_label(registrationForm.agreeTerms) }}
+        {{ form_errors(registrationForm.agreeTerms) }}
+      </div>
+
+      <button type="submit" class="btn btn-primary login-btn">
+        S'inscrire →
+      </button>
+
+    {{ form_end(registrationForm) }}
+
+    <div class="login-footer">
+      <a href="{{ path('app_login') }}">Déjà un compte ? Se connecter</a>
+    </div>
+
+  </div>
+</section>
+
+<footer class="footer">
+  <p>💀 La Petite Maison de l'Épouvante © 2025</p>
+</footer>
+
+{% endblock %}

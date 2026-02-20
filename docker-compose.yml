@@ -12,7 +12,7 @@ services:
       - APP_SECRET=34a1be6a7ab09cb639b66554513417e6
       - DATABASE_URL=mysql://demo:demo123456@mysql:3306/demo?serverVersion=8.0
     volumes:
-      - symfony_app:/var/www/symfony
+      - ./:/var/www/symfony:delegated
     restart: unless-stopped
     depends_on:
       - mysql
@@ -25,8 +25,8 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - symfony_app:/var/www/symfony:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+       - ./:/var/www/symfony:ro,delegated
+       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
 
   mysql:
@@ -57,4 +57,3 @@ services:
 
 volumes:
   demo_data:
-  symfony_app:
