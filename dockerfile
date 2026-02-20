@@ -10,7 +10,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/symfony
 
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --prefer-dist --no-autoloader --no-scripts
+RUN composer install --prefer-dist --no-autoloader --no-scripts
 
 COPY . .
 

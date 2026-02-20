@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}La Petite Maison de l'Épouvante{% endblock %}
+
+{% block body %}
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <span class="skull">💀</span> La Petite Maison de l'Épouvante
+  </div>
+  <ul class="navbar-links">
+    <li><a href="{{ path('app_home') }}">Accueil</a></li>
+    <li><a href="{{ path('api_products_list') }}">Catalogue</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <h1>Le lieu de rêve pour frissonner</h1>
+    <p>Figurines, Blu-ray, Fanzines, Jeux — Tout l'univers de l'horreur et du fantastique</p>
+    <a href="/products" class="btn-hero">Découvrir le catalogue</a>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section class="products-section">
+  <h2>Nos Produits</h2>
+  <div class="products-grid">
+    {% for product in products %}
+    <div class="card">
+      <div class="card-category">{{ product.category }}</div>
+      <h3 class="card-title">{{ product.name }}</h3>
+      <p class="card-desc">{{ product.description }}</p>
+      <div class="card-footer">
+        <span class="card-price">{{ product.price }} €</span>
+        <span class="card-stock 
+          {% if product.stock > 10 %}stock-ok
+          {% elseif product.stock > 0 %}stock-low
+          {% else %}stock-empty{% endif %}">
+          {% if product.stock > 0 %}En stock ({{ product.stock }}){% else %}Rupture{% endif %}
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-content">
+    <p>💀 La Petite Maison de l'Épouvante © 2025</p>
+    <p>Angoulême • Aix-en-Provence • Lyon • Londres</p>
+  </div>
+</footer>
+
+{% endblock %}
