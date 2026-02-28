@@ -73,28 +73,69 @@ docker compose up -d
 ---
 
 ## Commandes utiles
+
+### Gestion des conteneurs
 ```bash
 # Démarrer les conteneurs
 docker compose up -d
 
+# Démarrer et rebuilder les images
+docker compose up -d --build
+
 # Arrêter les conteneurs
 docker compose down
 
-# Arrêter et supprimer les volumes
+# Arrêter et supprimer les volumes (repart de zéro)
 docker compose down -v
 
-# Voir les logs
+# Voir l'état des conteneurs
+docker ps
+
+# Voir tous les conteneurs (même arrêtés)
+docker ps -a
+```
+
+### Logs
+```bash
+# Logs du conteneur PHP (Symfony)
 docker logs symfony
+
+# Logs de Nginx
 docker logs demo_symfony_nginx
 
+# Logs en temps réel (suivre les logs)
+docker logs -f symfony
+docker logs -f demo_symfony_nginx
+
+# Logs Symfony applicatifs
+docker exec symfony cat var/log/dev.log
+```
+
+### Accès aux conteneurs
+```bash
 # Accéder au shell du conteneur PHP
 docker exec -it symfony sh
 
-# Vider le cache Symfony
+# Accéder au shell MySQL
+docker exec -it mysql mysql -u demo -p
+```
+
+### Symfony
+```bash
+# Vider le cache
 docker exec symfony php bin/console cache:clear
 
 # Recharger les fixtures
 docker exec symfony php bin/console doctrine:fixtures:load --no-interaction
+
+# Valider le schéma de base de données
+docker exec symfony php bin/console doctrine:schema:validate
+
+# Recréer le schéma de base de données
+docker exec symfony php bin/console doctrine:schema:create --no-interaction
+
+# Lister toutes les routes
+docker exec symfony php bin/console debug:router
 ```
 
 ---
