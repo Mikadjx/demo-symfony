@@ -1,14 +1,12 @@
 # 💀 La Petite Maison de l'Épouvante — Demo Symfony
-
 Application de démonstration développée dans le cadre du projet CESI.
 Fonctionnalité implémentée : **Catalogue produits avec recommandations**.
 
 ---
 
 ## Prérequis
-
 - [Docker](https://www.docker.com/)
-- [WSL2](https://learn.microsoft.com/fr-fr/windows/wsl/) (si Windows)
+- [WSL2](https://learn.microsoft.com/fr-fr/windows/wsl/) — **obligatoire sur Windows** pour pouvoir lancer les conteneurs Docker
 - Git
 
 ---
@@ -16,41 +14,36 @@ Fonctionnalité implémentée : **Catalogue produits avec recommandations**.
 ## Installation
 
 ### 1 — Cloner le projet
-
-\`\`\`bash
+```bash
 git clone https://github.com/TON_USERNAME/demo-symfony.git
 cd demo-symfony
-\`\`\`
+```
 
 ### 2 — Lancer les conteneurs
 
-\`\`\`bash
+> ⚠️ **Windows uniquement** : cette commande doit être exécutée depuis un terminal **WSL2** (Ubuntu), pas depuis PowerShell ou CMD.
+```bash
 docker compose up -d --build
-\`\`\`
+```
 
 ### 3 — Initialiser la base de données
-
 Attendre que MySQL soit prêt puis :
-
-\`\`\`bash
+```bash
 docker exec symfony php bin/console doctrine:schema:create --no-interaction
 docker exec symfony php bin/console doctrine:fixtures:load --no-interaction
-\`\`\`
+```
 
 ---
 
 ## Lancer l'application (démarrage rapide)
-
 Si les conteneurs ont déjà été buildés :
-
-\`\`\`bash
+```bash
 docker compose up -d
-\`\`\`
+```
 
 ---
 
 ## URLs
-
 | Service | URL |
 |---|---|
 | Application Symfony | http://localhost:8080 |
@@ -61,7 +54,6 @@ docker compose up -d
 ---
 
 ## Connexion phpMyAdmin
-
 | Champ | Valeur |
 |---|---|
 | Serveur | mysql |
@@ -71,7 +63,6 @@ docker compose up -d
 ---
 
 ## Conteneurs Docker
-
 | Conteneur | Image | Rôle |
 |---|---|---|
 | `symfony` | php:8.4-fpm-alpine | Application PHP |
@@ -82,8 +73,7 @@ docker compose up -d
 ---
 
 ## Commandes utiles
-
-\`\`\`bash
+```bash
 # Démarrer les conteneurs
 docker compose up -d
 
@@ -105,13 +95,12 @@ docker exec symfony php bin/console cache:clear
 
 # Recharger les fixtures
 docker exec symfony php bin/console doctrine:fixtures:load --no-interaction
-\`\`\`
+```
 
 ---
 
 ## Structure du projet
-
-\`\`\`
+```
 demo-symfony/
 ├── .github/
 │   └── workflows/
@@ -135,14 +124,12 @@ demo-symfony/
 ├── docker-compose.yml
 ├── nginx.conf
 └── .env
-\`\`\`
+```
 
 ---
 
 ## Pipeline CI/CD
-
 Le pipeline GitHub Actions se déclenche à chaque `git push` sur `main` :
-
 1. Checkout du code
 2. Installation PHP 8.4
 3. Installation des dépendances Composer
@@ -151,7 +138,6 @@ Le pipeline GitHub Actions se déclenche à chaque `git push` sur `main` :
 ---
 
 ## Technologies
-
 - **PHP** 8.4
 - **Symfony** 7.x
 - **Doctrine ORM**
