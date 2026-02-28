@@ -5,40 +5,94 @@ Fonctionnalité implémentée : **Catalogue produits avec recommandations**.
 ---
 
 ## Prérequis
-- [Docker](https://www.docker.com/)
-- [WSL2](https://learn.microsoft.com/fr-fr/windows/wsl/) — **obligatoire sur Windows** pour pouvoir lancer les conteneurs Docker
+- [Docker Desktop](https://www.docker.com/)
+- [WSL2](https://learn.microsoft.com/fr-fr/windows/wsl/) avec **Ubuntu** — obligatoire sur Windows
+- [VS Code](https://code.visualstudio.com/) avec l'extension **Remote - WSL**
 - Git
 
 ---
 
-## Installation
+## Installation (première fois uniquement)
 
-### 1 — Cloner le projet
+### 0 — Installer WSL2 et Ubuntu
+Dans **PowerShell en administrateur** :
+```powershell
+wsl --install
+```
+Redémarre le PC si demandé. Puis ouvre **Ubuntu** depuis le menu Démarrer.
+
+### 1 — Cloner le projet dans WSL2
 ```bash
-git clone https://github.com/TON_USERNAME/demo-symfony.git
+cd ~
+git clone https://github.com/Mikadjx/demo-symfony.git
 cd demo-symfony
 ```
 
-### 2 — Lancer les conteneurs
+### 2 — Créer les fichiers de configuration locaux
+```bash
+touch .env.local
+touch .env.dev.local
+touch .env.test.local
+```
 
-> ⚠️ **Windows uniquement** : cette commande doit être exécutée depuis un terminal **WSL2** (Ubuntu), pas depuis PowerShell ou CMD.
+### 3 — Remplir `.env.local`
+```bash
+nano .env.local
+```
+Colle le contenu suivant, puis sauvegarde avec `Ctrl+X` → `Y` → `Entrée` :
+```dotenv
+DATABASE_URL=mysql://MYSQL_USER:MYSQL_PASSWORD@mysql:3306/MYSQL_DATABASE?serverVersion=8.0
+```
+
+> ⚠️ Remplace `MYSQL_USER`, `MYSQL_PASSWORD` et `MYSQL_DATABASE` par les vraies valeurs. Contacte le mainteneur du projet pour les obtenir.
+
+### 4 — Remplir `.env.dev.local`
+```bash
+nano .env.dev.local
+```
+Colle le contenu suivant, puis sauvegarde avec `Ctrl+X` → `Y` → `Entrée` :
+```dotenv
+APP_SECRET=VOTRE_SECRET_ICI
+```
+
+> ⚠️ Remplace `VOTRE_SECRET_ICI` par la vraie valeur. Contacte le mainteneur du projet pour l'obtenir.
+
+### 5 — Lancer les conteneurs
 ```bash
 docker compose up -d --build
 ```
 
-### 3 — Initialiser la base de données
-Attendre que MySQL soit prêt puis :
+### 6 — Installer les dépendances
+```bash
+docker exec symfony composer install
+```
+
+### 7 — Initialiser la base de données
 ```bash
 docker exec symfony php bin/console doctrine:schema:create --no-interaction
 docker exec symfony php bin/console doctrine:fixtures:load --no-interaction
 ```
 
+### 8 — Ouvrir le projet dans VS Code
+```bash
+code .
+```
+
+> VS Code s'ouvre directement connecté à WSL2. Le terminal intégré est déjà dans le bon dossier. Tu peux tout faire depuis VS Code : modifier le code, lancer des commandes Docker, faire tes `git add`, `commit`, `push`.
+
 ---
 
-## Lancer l'application (démarrage rapide)
-Si les conteneurs ont déjà été buildés :
+## Démarrage rapide (sessions suivantes)
 ```bash
+# 1. Ouvrir Ubuntu depuis le menu Démarrer
+# 2. Aller dans le projet
+cd ~/demo-symfony
+
+# 3. Démarrer les conteneurs
 docker compose up -d
+
+# 4. Ouvrir VS Code
+code .
 ```
 
 ---
@@ -57,8 +111,8 @@ docker compose up -d
 | Champ | Valeur |
 |---|---|
 | Serveur | mysql |
-| Utilisateur | voir `.env` |
-| Mot de passe | voir `.env` |
+| Utilisateur | voir `.env.local` |
+| Mot de passe | voir `.env.local` |
 
 ---
 
@@ -69,6 +123,18 @@ docker compose up -d
 | `demo_symfony_nginx` | nginx:alpine | Serveur web |
 | `mysql` | mysql:8.0 | Base de données |
 | `phpmyadmin` | phpmyadmin | Interface BDD |
+
+---
+
+## Workflow Git
+```bash
+# Modifier le code dans VS Code
+# Puis depuis le terminal VS Code :
+
+git add .
+git commit -m "description de la modification"
+git push
+```
 
 ---
 
@@ -125,6 +191,9 @@ docker exec -it mysql mysql -u demo -p
 # Vider le cache
 docker exec symfony php bin/console cache:clear
 
+# Installer les dépendances
+docker exec symfony composer install
+
 # Recharger les fixtures
 docker exec symfony php bin/console doctrine:fixtures:load --no-interaction
 
@@ -141,31 +210,6 @@ docker exec symfony php bin/console debug:router
 ---
 
 ## Structure du projet
-```
-demo-symfony/
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-├── src/
-│   ├── Controller/
-│   │   ├── HomeController.php
-│   │   └── ProductController.php
-│   ├── Entity/
-│   │   └── Product.php
-│   ├── Repository/
-│   │   └── ProductRepository.php
-│   └── Service/
-│       └── RecommendationService.php
-├── templates/
-│   ├── base.html.twig
-│   └── home/
-│       ├── index.html.twig
-│       └── product.html.twig
-├── Dockerfile
-├── docker-compose.yml
-├── nginx.conf
-└── .env
-```
 
 ---
 
