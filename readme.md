@@ -57,8 +57,8 @@ docker compose up -d
 | Champ | Valeur |
 |---|---|
 | Serveur | mysql |
-| Utilisateur | root |
-| Mot de passe | root123456 |
+| Utilisateur | voir `.env` |
+| Mot de passe | voir `.env` |
 
 ---
 
