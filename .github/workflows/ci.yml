@@ -8,8 +8,9 @@ on:
 
 env:
   PHP_VERSION: '8.4'
-  DATABASE_URL: "mysql://demo:root123456@127.0.0.1:3306/demo_test?serverVersion=8.0&charset=utf8mb4"
+  DATABASE_URL: "mysql://demo_user:demo_password@127.0.0.1:3306/demo_test?serverVersion=8.0&charset=utf8mb4"
   PREPROD_URL: "https://demo-nginix.dev.fabdevlab.fr"
+  DEFAULT_URI: "https://demo-nginix.dev.fabdevlab.fr"
 
 jobs:
 
@@ -36,6 +37,11 @@ jobs:
 
       - name: Clear Symfony cache
         run: php bin/console cache:clear --env=test
+        env:
+          APP_ENV: test
+          APP_SECRET: test-secret-for-ci
+          DEFAULT_URI: ${{ env.DEFAULT_URI }}
+          DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Cache vendor
         uses: actions/cache@v4
@@ -45,6 +51,7 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 2 — SECURITY SCAN (SonarQube)
+  # Shift-left DevSecOps : analyse statique AVANT les tests
   # ─────────────────────────────────────────────────────────────────────────────
   security-scan:
     name: "2 — Security Scan (SonarQube)"
@@ -67,6 +74,8 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 3 — TESTS UNITAIRES
+  # Sans BDD, sans kernel Symfony
+  # CatalogueService : filterAvailableProducts, filterByCategory, sortByPriceAsc
   # ─────────────────────────────────────────────────────────────────────────────
   test-unit:
     name: "3 — Unit Tests"
@@ -93,12 +102,15 @@ jobs:
       - name: Run unit tests
         env:
           APP_ENV: test
-          APP_SECRET: ${{ secrets.APP_SECRET }}
-          DEFAULT_URI: ${{ env.PREPROD_URL }}
+          APP_SECRET: test-secret-for-ci
+          DEFAULT_URI: ${{ env.DEFAULT_URI }}
+          DATABASE_URL: ${{ env.DATABASE_URL }}
         run: php vendor/bin/phpunit --testsuite=unit --testdox
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 4 — TESTS FONCTIONNELS
+  # Avec BDD MySQL éphémère — credentials alignés avec docker-compose.yml
+  # /login succès/échec + /product protégé → coverage.xml → SonarQube
   # ─────────────────────────────────────────────────────────────────────────────
   test-functional:
     name: "4 — Functional Tests (Catalogue + Auth)"
@@ -109,10 +121,10 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: rootpassword
           MYSQL_DATABASE: demo_test
-          MYSQL_USER: demo
-          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_USER: demo_user
+          MYSQL_PASSWORD: demo_password
         ports:
           - 3306:3306
         options: >-
@@ -141,24 +153,24 @@ jobs:
       - name: Run database migrations
         env:
           APP_ENV: test
-          APP_SECRET: ${{ secrets.APP_SECRET }}
-          DEFAULT_URI: ${{ env.PREPROD_URL }}
+          APP_SECRET: test-secret-for-ci
+          DEFAULT_URI: ${{ env.DEFAULT_URI }}
           DATABASE_URL: ${{ env.DATABASE_URL }}
         run: php bin/console doctrine:migrations:migrate --no-interaction --env=test
 
       - name: Load fixtures
         env:
           APP_ENV: test
-          APP_SECRET: ${{ secrets.APP_SECRET }}
-          DEFAULT_URI: ${{ env.PREPROD_URL }}
+          APP_SECRET: test-secret-for-ci
+          DEFAULT_URI: ${{ env.DEFAULT_URI }}
           DATABASE_URL: ${{ env.DATABASE_URL }}
         run: php bin/console doctrine:fixtures:load --no-interaction --env=test
 
       - name: Run functional tests with coverage
         env:
           APP_ENV: test
-          APP_SECRET: ${{ secrets.APP_SECRET }}
-          DEFAULT_URI: ${{ env.PREPROD_URL }}
+          APP_SECRET: test-secret-for-ci
+          DEFAULT_URI: ${{ env.DEFAULT_URI }}
           DATABASE_URL: ${{ env.DATABASE_URL }}
         run: |
           php vendor/bin/phpunit \
@@ -182,6 +194,8 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 5 — NON-RÉGRESSION PRÉ-DEPLOY (baseline)
+  # Capture l'état stable de la preprod AVANT le déploiement
+  # Si ça échoue → preprod déjà instable → on bloque le deploy
   # ─────────────────────────────────────────────────────────────────────────────
   non-regression-pre:
     name: "5 — Non-Régression Pré-Deploy (baseline)"
@@ -219,6 +233,7 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 6 — DÉPLOIEMENT PREPROD (Coolify)
+  # Déclenché uniquement si la baseline pré-deploy est verte
   # ─────────────────────────────────────────────────────────────────────────────
   deploy:
     name: "6 — Deploy Preprod (Coolify)"
@@ -236,6 +251,8 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 7 — NON-RÉGRESSION POST-DEPLOY
+  # Mêmes vérifications qu'avant le deploy
+  # Si ça échoue → le deploy a introduit une régression → rollback nécessaire
   # ─────────────────────────────────────────────────────────────────────────────
   non-regression-post:
     name: "7 — Non-Régression Post-Deploy (régression ?)"
@@ -275,6 +292,9 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 8 — TESTS DE CHARGE (K6 → Grafana Cloud)
+  # Uniquement si post-deploy est vert
+  # Montée en charge : 10 → 50 → 100 utilisateurs simultanés
+  # Résultats → Grafana Cloud (zone Paris)
   # ─────────────────────────────────────────────────────────────────────────────
   load-test:
     name: "8 — Load Tests (K6 → Grafana Cloud)"
