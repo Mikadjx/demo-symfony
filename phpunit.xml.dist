@@ -23,4 +23,13 @@
             <directory>tests/Functional</directory>
         </testsuite>
     </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+        <exclude>
+            <directory>src/DataFixtures</directory>
+            <directory>src/Migrations</directory>
+        </exclude>
+    </source>
 </phpunit>
