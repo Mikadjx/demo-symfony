@@ -12,13 +12,8 @@ env:
   PREPROD_URL: "https://demo-nginx.dev.fabdevlab.fr/"
   DEFAULT_URI: "https://demo-nginx.dev.fabdevlab.fr/"
 
-  
-
 jobs:
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # ÉTAPE 1 — BUILD
-  # ─────────────────────────────────────────────────────────────────────────────
   build:
     name: "1 — Build"
     runs-on: ubuntu-latest
@@ -51,9 +46,6 @@ jobs:
           path: vendor
           key: vendor-${{ hashFiles('composer.lock') }}
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # ÉTAPE 2 — SECURITY SCAN (SonarQube)
-  # ─────────────────────────────────────────────────────────────────────────────
   security-scan:
     name: "2 — Security Scan (SonarQube)"
     runs-on: ubuntu-latest
@@ -73,9 +65,6 @@ jobs:
             -Dsonar.sources=src
             -Dsonar.tests=tests
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # ÉTAPE 3 — TESTS UNITAIRES
-  # ─────────────────────────────────────────────────────────────────────────────
   test-unit:
     name: "3 — Unit Tests"
     runs-on: ubuntu-latest
@@ -106,9 +95,6 @@ jobs:
           DATABASE_URL: ${{ env.DATABASE_URL }}
         run: php vendor/bin/phpunit --testsuite=unit --testdox
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # ÉTAPE 4 — TESTS FONCTIONNELS
-  # ─────────────────────────────────────────────────────────────────────────────
   test-functional:
     name: "4 — Functional Tests (Catalogue + Auth)"
     runs-on: ubuntu-latest
@@ -184,22 +170,6 @@ jobs:
             --coverage-clover coverage.xml \
             --log-junit test-report.xml
 
-      - name: Update SonarQube with coverage
-        uses: sonarsource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://demo-sonarcube.dev.fabdevlab.fr
-        with:
-          args: >
-            -Dsonar.projectKey=Demo-symfony
-            -Dsonar.sources=src
-            -Dsonar.tests=tests
-            -Dsonar.php.coverage.reportPaths=coverage.xml
-            -Dsonar.php.tests.reportPath=test-report.xml
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # ÉTAPE 5 — NON-RÉGRESSION PRÉ-DEPLOY (baseline)
-  # ─────────────────────────────────────────────────────────────────────────────
   non-regression-pre:
     name: "5 — Non-Régression Pré-Deploy (baseline)"
     runs-on: ubuntu-latest
@@ -210,33 +180,18 @@ jobs:
       - name: Baseline — Homepage HTTP 200
         run: |
           status=$(curl -o /dev/null -s -w "%{http_code}" ${{ env.DEFAULT_URI }})
-          if [ "$status" -ne 200 ]; then
-            echo "❌ Homepage baseline échoue ($status) — preprod déjà instable"
-            exit 1
-          fi
-          echo "✅ Homepage baseline OK ($status)"
+          if [ "$status" -ne 200 ]; then exit 1; fi
 
       - name: Baseline — Login page HTTP 200
         run: |
           status=$(curl -o /dev/null -s -w "%{http_code}" ${{ env.DEFAULT_URI }}/login)
-          if [ "$status" -ne 200 ]; then
-            echo "❌ Login baseline échoue ($status)"
-            exit 1
-          fi
-          echo "✅ Login baseline OK ($status)"
+          if [ "$status" -ne 200 ]; then exit 1; fi
 
       - name: Baseline — Catalogue protégé HTTP 302
         run: |
           status=$(curl -o /dev/null -s -w "%{http_code}" --max-redirs 0 ${{ env.PREPROD_URL }}/product)
-          if [ "$status" -ne 302 ]; then
-            echo "❌ Protection catalogue baseline échoue ($status)"
-            exit 1
-          fi
-          echo "✅ Catalogue baseline OK — redirect $status vers /login"
+          if [ "$status" -ne 302 ]; then exit 1; fi
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # ÉTAPE 6 — DÉPLOIEMENT PREPROD (Coolify)
-  # ─────────────────────────────────────────────────────────────────────────────
   deploy:
     name: "6 — Deploy Preprod (Coolify)"
     runs-on: ubuntu-latest
@@ -247,52 +202,32 @@ jobs:
         run: |
           curl -X GET "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-            --fail \
-            --silent \
-            --show-error
+            --fail --silent --show-error
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # ÉTAPE 7 — NON-RÉGRESSION POST-DEPLOY
-  # ─────────────────────────────────────────────────────────────────────────────
   non-regression-post:
-    name: "7 — Non-Régression Post-Deploy (régression ?)"
+    name: "7 — Non-Régression Post-Deploy"
     runs-on: ubuntu-latest
     needs: deploy
 
     steps:
-      - name: Wait for deployment to be ready
+      - name: Wait for deployment
         run: sleep 30
 
-      - name: Vérif — Homepage HTTP 200
+      - name: Vérif homepage
         run: |
           status=$(curl -o /dev/null -s -w "%{http_code}" ${{ env.PREPROD_URL }})
-          if [ "$status" -ne 200 ]; then
-            echo "❌ RÉGRESSION — Homepage retourne $status après deploy"
-            exit 1
-          fi
-          echo "✅ Homepage OK ($status)"
+          if [ "$status" -ne 200 ]; then exit 1; fi
 
-      - name: Vérif — Login page HTTP 200
+      - name: Vérif login
         run: |
           status=$(curl -o /dev/null -s -w "%{http_code}" ${{ env.PREPROD_URL }}/login)
-          if [ "$status" -ne 200 ]; then
-            echo "❌ RÉGRESSION — Login retourne $status après deploy"
-            exit 1
-          fi
-          echo "✅ Login OK ($status)"
+          if [ "$status" -ne 200 ]; then exit 1; fi
 
-      - name: Vérif — Catalogue protégé HTTP 302
+      - name: Vérif catalogue protégé
         run: |
           status=$(curl -o /dev/null -s -w "%{http_code}" --max-redirs 0 ${{ env.PREPROD_URL }}/product)
-          if [ "$status" -ne 302 ]; then
-            echo "❌ RÉGRESSION — /product retourne $status — protection cassée !"
-            exit 1
-          fi
-          echo "✅ Catalogue protégé OK ($status)"
+          if [ "$status" -ne 302 ]; then exit 1; fi
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # ÉTAPE 8 — TESTS DE CHARGE (K6 → Grafana Cloud)
-  # ─────────────────────────────────────────────────────────────────────────────
   load-test:
     name: "8 — Load Tests (K6 → Grafana Cloud)"
     runs-on: ubuntu-latest
@@ -314,9 +249,11 @@ jobs:
           sudo apt-get install k6 -y
 
       - name: Run K6 load test
-        run: k6 cloud run k6/load-test.js
+        run: |
+          k6 cloud run \
+            -e BASE_URL=${{ env.PREPROD_URL }} \
+            -e K6_USERNAME=${{ secrets.E2E_USER_EMAIL }} \
+            -e K6_PASSWORD=${{ secrets.E2E_USER_PASSWORD }} \
+            k6/load-test.js
         env:
-          BASE_URL: ${{ env.PREPROD_URL }}
-          K6_USERNAME: ${{ secrets.E2E_USER_EMAIL }}
-          K6_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
           K6_CLOUD_TOKEN: ${{ secrets.GRAFANA_TOKEN }}

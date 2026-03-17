@@ -19,58 +19,46 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.BASE_URL;
+// Fallback si BASE_URL n'est pas défini
+const BASE_URL = __ENV.BASE_URL || 'https://demo-nginx.dev.fabdevlab.fr';
 
 export function setup() {
-  // Récupération du CSRF token sur la page login
   const loginPage = http.get(`${BASE_URL}/login`);
   check(loginPage, { 'login page accessible': (r) => r.status === 200 });
 
-  // Extraction du token CSRF depuis le formulaire Symfony
   const csrfToken = loginPage.html().find('input[name="_csrf_token"]').attr('value');
-  console.log(`CSRF token: ${csrfToken ? 'OK' : 'ECHEC'}`);
 
-  // Login via formulaire Symfony → cookie de session
   const res = http.post(`${BASE_URL}/login`, {
-    _username: __ENV.K6_USERNAME,
-    _password: __ENV.K6_PASSWORD,
+    _username: __ENV.K6_USERNAME || '',
+    _password: __ENV.K6_PASSWORD || '',
     _csrf_token: csrfToken,
-  }, {
-    redirects: 5,
-  });
+  }, { redirects: 5 });
 
-  console.log(`Login status: ${res.status}`);
-
-  // Récupération du cookie de session
-  const sessionCookie = res.cookies['PHPSESSID'] 
-    ? res.cookies['PHPSESSID'][0].value 
+  const sessionCookie = res.cookies['PHPSESSID']
+    ? res.cookies['PHPSESSID'][0].value
     : null;
-  console.log(`Session cookie: ${sessionCookie ? 'OK' : 'ECHEC'}`);
 
+  console.log(`Session: ${sessionCookie ? 'OK' : 'ECHEC'}`);
   return { sessionCookie };
 }
 
 export default function (data) {
   const params = {
-    headers: {
-      'Cookie': `PHPSESSID=${data.sessionCookie}`,
-    },
+    headers: { 'Cookie': `PHPSESSID=${data.sessionCookie}` },
   };
 
-  // Test homepage — accessible sans connexion
   let res = http.get(`${BASE_URL}/`);
   check(res, {
-    'homepage status 200':     (r) => r.status === 200,
-    'homepage p95 < 200ms':    (r) => r.timings.duration < 200,
+    'homepage 200': (r) => r.status === 200,
+    'homepage < 200ms': (r) => r.timings.duration < 200,
   });
 
   sleep(1);
 
-  // Test catalogue — accessible uniquement si connecté
   res = http.get(`${BASE_URL}/product`, params);
   check(res, {
-    'catalogue status 200':    (r) => r.status === 200,
-    'catalogue p95 < 200ms':   (r) => r.timings.duration < 200,
+    'catalogue 200': (r) => r.status === 200,
+    'catalogue < 200ms': (r) => r.timings.duration < 200,
   });
 
   sleep(1);
