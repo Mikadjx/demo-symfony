@@ -246,7 +246,7 @@ jobs:
       - name: Trigger Coolify preprod deployment
         run: |
           curl -X GET "${{ secrets.COOLIFY_WEBHOOK }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_WEBHOOK_URL }}" \
             --fail \
             --silent \
             --show-error

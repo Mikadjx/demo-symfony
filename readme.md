@@ -97,7 +97,7 @@ docker compose up -d
 code .
 ```
 
----
+------
 
 ## URLs
 | Service | URL |
