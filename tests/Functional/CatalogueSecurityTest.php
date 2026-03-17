@@ -15,7 +15,6 @@ class CatalogueSecurityTest extends WebTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = $container->get('security.user_password_hasher');
 
-        // Nettoyer l'utilisateur s'il existe déjà
         $existing = $em->getRepository(User::class)->findOneBy(['email' => $email]);
         if ($existing) {
             $em->remove($existing);
@@ -36,8 +35,6 @@ class CatalogueSecurityTest extends WebTestCase
     {
         $client = static::createClient();
         $client->request('GET', '/product');
-
-        // Sans connexion → redirect vers /login
         $this->assertResponseRedirects('/login');
     }
 
@@ -45,7 +42,6 @@ class CatalogueSecurityTest extends WebTestCase
     {
         $client = static::createClient();
         $client->request('GET', '/login');
-
         $this->assertResponseIsSuccessful();
         $this->assertResponseStatusCodeSame(200);
     }
@@ -57,7 +53,8 @@ class CatalogueSecurityTest extends WebTestCase
         $client = static::createClient();
         $client->request('GET', '/login');
 
-        $client->submitForm('Se connecter', [
+        // Le bouton s'appelle "Entrer dans l'obscurité →" avec name="login"
+        $client->submitForm('login', [
             '_username' => 'inconnu@maison-epouvante.com',
             '_password' => 'mauvais-mot-de-passe',
         ]);
@@ -75,7 +72,7 @@ class CatalogueSecurityTest extends WebTestCase
         $this->createUser('user@maison-epouvante.com', 'password123');
 
         $client->request('GET', '/login');
-        $client->submitForm('Se connecter', [
+        $client->submitForm('login', [
             '_username' => 'user@maison-epouvante.com',
             '_password' => 'password123',
         ]);
@@ -94,7 +91,7 @@ class CatalogueSecurityTest extends WebTestCase
         $this->createUser('admin@maison-epouvante.com', 'admin123', ['ROLE_ADMIN']);
 
         $client->request('GET', '/login');
-        $client->submitForm('Se connecter', [
+        $client->submitForm('login', [
             '_username' => 'admin@maison-epouvante.com',
             '_password' => 'admin123',
         ]);
