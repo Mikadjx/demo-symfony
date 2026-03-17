@@ -1,5 +1,4 @@
-{{ include('product/_delete_form.html.twig') }}
-<form method="post" action="{{ path('product_delete', {'id': product.id}) }}"
+<form method="post" action="{{ path('app_product_delete', {'id': product.id}) }}"
       onsubmit="return confirm('Confirmer la suppression ?');">
   <input type="hidden" name="_method" value="DELETE">
   <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ product.id) }}">
