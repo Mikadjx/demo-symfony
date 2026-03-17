@@ -9,8 +9,10 @@ on:
 env:
   PHP_VERSION: '8.4'
   DATABASE_URL: "mysql://demo_user:demo_password@127.0.0.1:3306/demo_test?serverVersion=8.0&charset=utf8mb4"
-  PREPROD_URL: "https://demo-ngnix.dev.fabdevlab.fr"
-  DEFAULT_URI: "https://demo-ngnix.dev.fabdevlab.fr"
+  PREPROD_URL: "https://demo-nginx.dev.fabdevlab.fr/"
+  DEFAULT_URI: "https://demo-nginx.dev.fabdevlab.fr/"
+
+  
 
 jobs:
 
