@@ -207,7 +207,7 @@ jobs:
     steps:
       - name: Baseline — Homepage HTTP 200
         run: |
-          status=$(curl -o /dev/null -s -w "%{http_code}" ${{ env.PREPROD_URL }})
+          status=$(curl -o /dev/null -s -w "%{http_code}" ${{ env.DEFAULT_URI }})
           if [ "$status" -ne 200 ]; then
             echo "❌ Homepage baseline échoue ($status) — preprod déjà instable"
             exit 1
@@ -216,7 +216,7 @@ jobs:
 
       - name: Baseline — Login page HTTP 200
         run: |
-          status=$(curl -o /dev/null -s -w "%{http_code}" ${{ env.PREPROD_URL }}/login)
+          status=$(curl -o /dev/null -s -w "%{http_code}" ${{ env.DEFAULT_URI }}/login)
           if [ "$status" -ne 200 ]; then
             echo "❌ Login baseline échoue ($status)"
             exit 1
