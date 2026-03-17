@@ -10,17 +10,6 @@ security:
         dev:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
-        api_login:
-            pattern: ^/api/login_check
-            stateless: true
-            json_login:
-                check_path: /api/login_check
-                success_handler: lexik_jwt_authentication.handler.authentication_success
-                failure_handler: lexik_jwt_authentication.handler.authentication_failure
-        api:
-            pattern: ^/api
-            stateless: true
-            jwt: ~
         main:
             lazy: true
             provider: app_user_provider
@@ -28,16 +17,16 @@ security:
                 login_path: app_login
                 check_path: app_login
                 enable_csrf: true
-                default_target_path: admin
+                default_target_path: app_product_index
             logout:
                 path: app_logout
                 target: app_home
     access_control:
-        - { path: ^/api/login_check, roles: PUBLIC_ACCESS }
-        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/product, roles: ROLE_USER }
+        - { path: ^/, roles: PUBLIC_ACCESS }
 
 when@test:
     security:

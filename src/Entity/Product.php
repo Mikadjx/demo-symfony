@@ -42,7 +42,6 @@ class Product
     public function setName(string $name): static
     {
         $this->name = $name;
-
         return $this;
     }
 
@@ -54,7 +53,6 @@ class Product
     public function setDescription(?string $description): static
     {
         $this->description = $description;
-
         return $this;
     }
 
@@ -66,7 +64,6 @@ class Product
     public function setPrice(string $price): static
     {
         $this->price = $price;
-
         return $this;
     }
 
@@ -78,7 +75,6 @@ class Product
     public function setCategory(string $category): static
     {
         $this->category = $category;
-
         return $this;
     }
 
@@ -90,7 +86,26 @@ class Product
     public function setStock(int $stock): static
     {
         $this->stock = $stock;
-
         return $this;
+    }
+
+    // ── Méthodes métier ───────────────────────────────────────────────────────
+
+    /**
+     * Vérifie si le produit est disponible en stock
+     * Utilisé par CatalogueService::filterAvailableProducts()
+     */
+    public function isInStock(): bool
+    {
+        return $this->stock > 0;
+    }
+
+    /**
+     * Vérifie si la quantité demandée peut être honorée
+     * Utilisé pour la gestion des commandes
+     */
+    public function isAvailableInQuantity(int $quantity): bool
+    {
+        return $this->stock >= $quantity;
     }
 }
