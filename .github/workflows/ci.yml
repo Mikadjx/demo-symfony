@@ -51,7 +51,6 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 2 — SECURITY SCAN (SonarQube)
-  # Shift-left DevSecOps : analyse statique AVANT les tests
   # ─────────────────────────────────────────────────────────────────────────────
   security-scan:
     name: "2 — Security Scan (SonarQube)"
@@ -74,8 +73,6 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 3 — TESTS UNITAIRES
-  # Sans BDD, sans kernel Symfony
-  # CatalogueService : filterAvailableProducts, filterByCategory, sortByPriceAsc
   # ─────────────────────────────────────────────────────────────────────────────
   test-unit:
     name: "3 — Unit Tests"
@@ -109,8 +106,6 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 4 — TESTS FONCTIONNELS
-  # Avec BDD MySQL éphémère — credentials alignés avec docker-compose.yml
-  # /login succès/échec + /product protégé → coverage.xml → SonarQube
   # ─────────────────────────────────────────────────────────────────────────────
   test-functional:
     name: "4 — Functional Tests (Catalogue + Auth)"
@@ -166,6 +161,14 @@ jobs:
           DATABASE_URL: ${{ env.DATABASE_URL }}
         run: php bin/console doctrine:fixtures:load --no-interaction --env=test
 
+      - name: Warmup cache for test env
+        env:
+          APP_ENV: test
+          APP_SECRET: test-secret-for-ci
+          DEFAULT_URI: ${{ env.DEFAULT_URI }}
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: php bin/console cache:warmup --env=test
+
       - name: Run functional tests with coverage
         env:
           APP_ENV: test
@@ -173,7 +176,7 @@ jobs:
           DEFAULT_URI: ${{ env.DEFAULT_URI }}
           DATABASE_URL: ${{ env.DATABASE_URL }}
         run: |
-          php vendor/bin/phpunit \
+          php -d memory_limit=512M vendor/bin/phpunit \
             --testsuite=functional \
             --testdox \
             --coverage-clover coverage.xml \
@@ -194,8 +197,6 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 5 — NON-RÉGRESSION PRÉ-DEPLOY (baseline)
-  # Capture l'état stable de la preprod AVANT le déploiement
-  # Si ça échoue → preprod déjà instable → on bloque le deploy
   # ─────────────────────────────────────────────────────────────────────────────
   non-regression-pre:
     name: "5 — Non-Régression Pré-Deploy (baseline)"
@@ -233,7 +234,6 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 6 — DÉPLOIEMENT PREPROD (Coolify)
-  # Déclenché uniquement si la baseline pré-deploy est verte
   # ─────────────────────────────────────────────────────────────────────────────
   deploy:
     name: "6 — Deploy Preprod (Coolify)"
@@ -251,8 +251,6 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 7 — NON-RÉGRESSION POST-DEPLOY
-  # Mêmes vérifications qu'avant le deploy
-  # Si ça échoue → le deploy a introduit une régression → rollback nécessaire
   # ─────────────────────────────────────────────────────────────────────────────
   non-regression-post:
     name: "7 — Non-Régression Post-Deploy (régression ?)"
@@ -292,9 +290,6 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # ÉTAPE 8 — TESTS DE CHARGE (K6 → Grafana Cloud)
-  # Uniquement si post-deploy est vert
-  # Montée en charge : 10 → 50 → 100 utilisateurs simultanés
-  # Résultats → Grafana Cloud (zone Paris)
   # ─────────────────────────────────────────────────────────────────────────────
   load-test:
     name: "8 — Load Tests (K6 → Grafana Cloud)"
@@ -322,4 +317,4 @@ jobs:
           BASE_URL: ${{ env.PREPROD_URL }}
           K6_USERNAME: ${{ secrets.E2E_USER_EMAIL }}
           K6_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
-          K6_CLOUD_TOKEN: ${{ secrets.GRAFANA_CLOUD_TOKEN }}
+          K6_CLOUD_TOKEN: ${{ secrets.GRAFANA_TOKEN }}
