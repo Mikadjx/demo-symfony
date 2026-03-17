@@ -230,3 +230,5 @@ Le pipeline GitHub Actions se déclenche à chaque `git push` sur `main` :
 - **Nginx** Alpine
 - **Docker** / Docker Compose
 - **GitHub Actions** CI/CD
+
+
