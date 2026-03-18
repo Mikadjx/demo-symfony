@@ -1,232 +1,168 @@
-# 💀 La Petite Maison de l'Épouvante — Demo Symfony
-Application de démonstration développée dans le cadre du projet CESI.
-Fonctionnalité implémentée : **Catalogue produits avec recommandations**.
+# La Petite Maison de l'Épouvante — Demo Symfony
+
+Application de démonstration développée dans le cadre du projet CESI (Bloc 3 Dev).
+
+**Fonctionnalité implémentée :** Catalogue produits avec système de recommandations.
+
+**Stack :** PHP 8.4, Symfony 7, MySQL 8.0, Nginx, Docker, GitHub Actions CI/CD, SonarQube.
+
+**Déploiement :** Coolify (auto-déploiement via webhook Git sur push `main`).
 
 ---
 
-## Prérequis
-- [Docker Desktop](https://www.docker.com/)
-- [WSL2](https://learn.microsoft.com/fr-fr/windows/wsl/) avec **Ubuntu** — obligatoire sur Windows
-- [VS Code](https://code.visualstudio.com/) avec l'extension **Remote - WSL**
-- Git
+## Architecture
 
----------
-
-## Installation (première fois uniquement)
-
-### 0 — Installer WSL2 et Ubuntu
-Dans **PowerShell en administrateur** :
-```powershell
-wsl --install --
 ```
-Redémarre le PC si demandé. Puis ouvre **Ubuntu** depuis le menu Démarrer.
+GitHub (push main)
+    ↓ webhook
+Coolify (PaaS Docker)
+    ├─ php       → PHP 8.4-FPM (Symfony)
+    ├─ nginx     → Reverse proxy HTTPS
+    ├─ mysql     → Base de données MySQL 8.0
+    ├─ phpmyadmin → Interface BDD (dev)
+    └─ sonarqube → Analyse qualité code
+```
 
-### 1 — Cloner le projet dans WSL2
+---
+
+## Développement local
+
+### Prérequis
+- [Docker Desktop](https://www.docker.com/)
+- [Git](https://git-scm.com/)
+
+### Installation
+
 ```bash
-cd ~
+# 1. Cloner le projet
 git clone https://github.com/Mikadjx/demo-symfony.git
 cd demo-symfony
-```
 
-> ℹ️ **Emplacement du projet** : le projet est cloné dans WSL2 (`~/demo-symfony`), pas dans un dossier Windows (`D:\`). C'est intentionnel pour des raisons de performance : les I/O fichiers sont jusqu'à 10x plus rapides dans WSL2 que depuis un dossier monté Windows.
-
-### 2 — Créer les fichiers de configuration locaux
-```bash
+# 2. Créer les fichiers de configuration locaux
 touch .env.local
-touch .env.dev.local
-touch .env.test.local
-```
 
-### 3 — Remplir `.env.local`
-```bash
-nano .env.local
-```
-Colle le contenu "database, puis sauvegarde avec `Ctrl+X` → `Y` → `Entrée` :
-```dotenv
-DATABASE_URL=mysql://MYSQL_USER:MYSQL_PASSWORD@mysql:3306/MYSQL_DATABASE?serverVersion=8.0
-```
+# 3. Renseigner .env.local (contacter le mainteneur pour les valeurs)
+# DATABASE_URL=mysql://USER:PASSWORD@mysql:3306/DATABASE?serverVersion=8.0
+# APP_SECRET=...
+# JWT_SECRET_KEY=...
+# JWT_PUBLIC_KEY=...
+# JWT_PASSPHRASE=...
 
-> ⚠️ Remplace `MYSQL_USER`, `MYSQL_PASSWORD` et `MYSQL_DATABASE` par les vraies valeurs. Contacte le mainteneur du projet pour les obtenir.
-
-### 4 — Remplir `.env.dev.local`
-```bash
-nano .env.dev.local
-```
-Colle le contenu suivant, puis sauvegarde avec `Ctrl+X` → `Y` → `Entrée` :
-```dotenv
-APP_SECRET=VOTRE_SECRET_ICI
-```
-
-> ⚠️ Remplace `VOTRE_SECRET_ICI` par la vraie valeur. Contacte le mainteneur du projet pour l'obtenir.
-
-### 5 — Lancer les conteneurs
-```bash
+# 4. Lancer les conteneurs
 docker compose up -d --build
+
+# 5. Installer les dépendances
+docker exec demo-symfony-php-1 composer install
+
+# 6. Initialiser la base de données
+docker exec demo-symfony-php-1 php bin/console doctrine:migrations:migrate --no-interaction
+docker exec demo-symfony-php-1 php bin/console doctrine:fixtures:load --no-interaction
 ```
 
-### 6 — Installer les dépendances
-```bash
-docker exec symfony composer install
-```
-
-### 7 — Initialiser la base de données
-```bash
-docker exec symfony php bin/console doctrine:schema:create --no-interaction
-docker exec symfony php bin/console doctrine:fixtures:load --no-interaction
-```
-
-### 8 — Ouvrir le projet dans VS Code
-```bash
-code .
-```
-
-> VS Code s'ouvre directement connecté à WSL2. Le terminal intégré est déjà dans le bon dossier. Tu peux tout faire depuis VS Code : modifier le code, lancer des commandes Docker, faire tes `git add`, `commit`, `push`.
+> Les credentials ne sont jamais commités. Contacte le mainteneur du projet pour obtenir les valeurs de configuration locale.
 
 ---
 
 ## Démarrage rapide (sessions suivantes)
-```bash
-# 1. Ouvrir Ubuntu depuis le menu Démarrer
-# 2. Aller dans le projet
-cd ~/demo-symfony
 
-# 3. Démarrer les conteneurs
+```bash
+# Démarrer les conteneurs
 docker compose up -d
 
-# 4. Ouvrir VS Code
-code .
+# Arrêter les conteneurs
+docker compose down
 ```
 
 ---
 
-## URLs
+## URLs locales
+
 | Service | URL |
 |---|---|
-| Application Symfony | https://localhost:8080 |
-| API Produits | https://localhost:8080/api/products |
-| API Produit par ID | https://localhost:8080/api/products/{id} |
-| phpMyAdmin | https://localhost:8888 |
-
---------
-
-## Connexion phpMyAdmin
-| Champ | Valeur |
-|---|---|
-| Serveur | mysql |
-| Utilisateur | voir `.env.local` |
-| Mot de passe | voir `.env.local` |
+| Application Symfony | http://localhost |
+| phpMyAdmin | http://localhost (port dédié, voir docker-compose.yml) |
+| SonarQube | http://localhost:9000 |
 
 ---
 
-## Conteneurs Docker
-| Conteneur | Image | Rôle |
-|---|---|---|
-| `symfony` | php:8.4-fpm-alpine | Application PHP |
-| `demo_symfony_nginx` | nginx:alpine | Serveur web |
-| `mysql` | mysql:8.0 | Base de données |
-| `phpmyadmin` | phpmyadmin | Interface BDD |
+## Pipeline CI/CD
+
+Le pipeline GitHub Actions se déclenche automatiquement à chaque `push` sur `main` :
+
+1. **Checkout** du code
+2. **Setup PHP 8.4** + extensions (pdo_mysql, intl, zip, opcache)
+3. **composer install** (dépendances sans scripts)
+4. **Migrations BDD** (MySQL service GitHub Actions)
+5. **PHPUnit** (tests unitaires + fonctionnels, mode `--testdox`)
+6. **SonarQube scan** (analyse qualité — serveur hébergé sur Coolify)
+7. **Déploiement automatique** via webhook Coolify sur `main`
 
 ---
 
-## Workflow Git
+## Tests
+
 ```bash
-# Modifier le code dans VS Code
-# Puis depuis le terminal VS Code :
+# Tests unitaires et fonctionnels (PHPUnit)
+docker exec demo-symfony-php-1 php vendor/bin/phpunit --testdox
 
-git add .
-git commit -m "description de la modification"
-git push
+# Tests E2E (Playwright) — nécessite les variables E2E_USER_EMAIL / E2E_USER_PASSWORD
+npx playwright test
+
+# Tests de charge (k6) — nécessite k6 installé et les variables BASE_URL / K6_USERNAME / K6_PASSWORD
+k6 run k6/load-test.js
 ```
 
 ---
 
 ## Commandes utiles
 
-### Gestion des conteneurs
+### Conteneurs
 ```bash
-# Démarrer les conteneurs
-docker compose up -d
-
-#yyy
-# Démarrer et rebuilder les images
-docker compose up -d --build
-
-# Arrêter les conteneurs
-docker compose down
-
-# Arrêter et supprimer les volumes (repart de zéro)
-docker compose down -v
-
-# Voir l'état des conteneurs
+# État des conteneurs
 docker ps
 
-# Voir tous les conteneurs (même arrêtés)
-docker ps -a
-```
+# Logs Symfony
+docker compose logs php -f
 
-### Logs
-```bash
-# Logs du conteneur PHP (Symfony)
-docker logs symfony
+# Logs Nginx
+docker compose logs nginx -f
 
-# Logs de Nginx
-docker logs demo_symfony_nginx
-
-# Logs en temps réel (suivre les logs)
-docker logs -f symfony
-docker logs -f demo_symfony_nginx
-
-# Logs Symfony applicatifs
-docker exec symfony cat var/log/dev.log
-```
-
-### Accès aux conteneurs
-```bash
-# Accéder au shell du conteneur PHP
-docker exec -it symfony sh
-
-# Accéder au shell MySQL
-docker exec -it mysql mysql -u demo -p
+# Shell PHP
+docker compose exec php sh
 ```
 
 ### Symfony
 ```bash
 # Vider le cache
-docker exec symfony php bin/console cache:clear
+docker compose exec php php bin/console cache:clear
 
-# Installer les dépendances
-docker exec symfony composer install
+# Lister les routes
+docker compose exec php php bin/console debug:router
+
+# Valider le schéma BDD
+docker compose exec php php bin/console doctrine:schema:validate
 
 # Recharger les fixtures
-docker exec symfony php bin/console doctrine:fixtures:load --no-interaction
-
-# Valider le schéma de base de données
-docker exec symfony php bin/console doctrine:schema:validate
-
-# Recréer le schéma de base de données
-docker exec symfony php bin/console doctrine:schema:create --no-interaction
-
-# Lister toutes les routes
-docker exec symfony php bin/console debug:router
+docker compose exec php php bin/console doctrine:fixtures:load --no-interaction
 ```
 
 ---
 
-## Pipeline CI/CD
-Le pipeline GitHub Actions se déclenche à chaque `git push` sur `main` :
-1. Checkout du code
-2. Installation PHP 8.4
-3. Installation des dépendances Composer
-4. Lancement des tests unitaires
-5. Build de l'image Docker
-
----
-
 ## Technologies
-- **PHP** 8.4
-- **Symfony** 7.x
-- **Doctrine ORM**
-- **MySQL** 8.0
-- **Nginx** Alpine
-- **Docker** / Docker Compose
-- **GitHub Actions** CI/CD
+
+| Catégorie | Technologie |
+|---|---|
+| Langage | PHP 8.4 |
+| Framework | Symfony 7.x |
+| ORM | Doctrine |
+| Base de données | MySQL 8.0 |
+| Serveur web | Nginx Alpine |
+| Conteneurisation | Docker / Docker Compose |
+| Hébergement | Coolify (PaaS self-hosted) |
+| CI/CD | GitHub Actions |
+| Qualité code | SonarQube Community |
+| Tests unitaires/fonctionnels | PHPUnit |
+| Tests E2E | Playwright |
+| Tests de charge | k6 (Grafana Cloud) |
+| Authentification API | JWT (LexikJWTAuthenticationBundle) |
+| Back-office | EasyAdmin |
