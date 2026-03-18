@@ -186,7 +186,7 @@ Job: tests
 |---|---|---|
 | **Sylius** | HAUTE | Framework e-commerce prévu pour la v2 |
 | Redis / Cache distribué | Moyenne | Scalabilité du cache recommandations |
-| Kubernetes | Basse | Orchestration à l'échelle (v3+) |
+| **Kubernetes** | **Moyenne** | **Orchestration v3 — associable à Coolify v4** |
 | RGAA | Moyenne | Obligation légale (accessibilité) |
 | Stripe / PSP | Haute | Paiement en ligne (v2) |
 
@@ -301,6 +301,9 @@ Stage 4 : 100→0 VU en 30s   (cooldown)
 **Q : Pourquoi SonarQube sur votre infrastructure plutôt que SonarCloud ?**
 > SonarCloud est la version cloud hébergée par SonarSource. Ici on auto-héberge SonarQube Community sur Coolify pour garder le contrôle des données de code et éviter les coûts pour un POC. En production, SonarCloud serait plus adapté.
 
+**Q : Pourquoi envisager Kubernetes et peut-on l'associer à Coolify ?**
+> Oui, Coolify v4 supporte nativement la connexion à un cluster Kubernetes existant. La stratégie est progressive : v1/v2 restent sur Docker Compose via Coolify (simple, adapté au POC et à Sylius), et la migration vers K8s se déclenche si la charge le justifie en v3. Kubernetes apporte trois avantages que Docker Compose ne peut pas offrir à grande échelle : l'auto-scaling horizontal (ajout de pods automatique selon la charge), les rolling deployments sans interruption de service, et la résilience multi-nœuds (un nœud tombe, les pods sont replanifiés). L'avantage de passer par Coolify est de garder une interface de gestion unifiée — on ne change pas d'outillage, on monte en puissance progressivement.
+
 **Q : Qu'est-ce que Sylius et pourquoi le prévoir en v2 ?**
 > Sylius est un framework e-commerce open-source basé sur Symfony. Il fournit clé en main : catalogue, panier, paiement, gestion des commandes, promotions. La migration depuis le POC sera naturelle car Sylius partage les mêmes concepts Symfony (bundles, entities, services). Cela évite de réinventer la roue pour les fonctionnalités e-commerce standards.
 
@@ -329,3 +332,7 @@ Stage 4 : 100→0 VU en 30s   (cooldown)
 | **VU** | Virtual User — utilisateur simulé dans k6 |
 | **CSP** | Content Security Policy — header HTTP anti-XSS |
 | **OWASP** | Open Web Application Security Project — référentiel sécurité |
+| **Kubernetes (K8s)** | Orchestrateur de conteneurs open-source (Google) — gère scaling, déploiements, résilience |
+| **Pod** | Unité de déploiement K8s — un ou plusieurs conteneurs partageant réseau et stockage |
+| **Rolling deployment** | Mise à jour progressive sans interruption de service (K8s) |
+| **Auto-scaling** | Ajout/suppression automatique de pods selon la charge CPU/mémoire |

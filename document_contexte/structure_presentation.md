@@ -255,7 +255,7 @@
 
 ---
 
-## SLIDE 13 — Vision future & Évolution vers Sylius
+## SLIDE 13 — Vision future & Évolution vers Sylius / Kubernetes
 
 **Titre :** Roadmap — Du POC à la plateforme complète
 
@@ -265,15 +265,25 @@ POC actuel (v1)              v2 (Sylius)              v3
 Catalogue produits     →  Panier + Paiement      →  Streaming Evil Ed
 Recommandations        →  Système de commandes   →  Festival en ligne
 API JWT                →  Espace communautaire   →  Système enchères
-Auth utilisateur       →  Fanzine numérique      →  ...
-SonarQube + k6         →  Notifications          →  ...
+Auth utilisateur       →  Fanzine numérique      →  K8s (orchestration)
+Docker Compose         →  Notifications          →  ...
++ Coolify (gestion)
 ```
 
-- Sylius : framework e-commerce basé sur Symfony — migration naturelle
-- Architecture microservice-ready dès le POC (API REST, JWT, Docker)
+**Évolution infra : Docker Compose → Kubernetes**
+
+| Étape | Infra | Quand |
+|---|---|---|
+| v1 (POC) | Docker Compose + Coolify | Maintenant — simple, adapté POC |
+| v2 | Docker Compose + Coolify (stable) | Sylius + montée en charge |
+| v3 | Kubernetes + Coolify (interface K8s) | Si charge justifie la complexité |
+
+- **Coolify + Kubernetes** : Coolify v4 permet de **connecter un cluster K8s existant** et de le piloter depuis la même interface — la migration sera progressive et non-disruptive
+- Kubernetes apporte : auto-scaling horizontal, rolling deployments zéro-downtime, résilience multi-nœuds
+- Sylius : framework e-commerce basé sur Symfony — migration naturelle depuis le POC
 
 **Notes :**
-> "L'architecture du POC a été pensée pour évoluer. L'API REST + JWT est déjà compatible avec une architecture microservices. Sylius s'intègre nativement avec Symfony — la migration du catalogue sera transparente. La v2 ajoutera panier, paiement et l'espace communautaire. La v3 intègrera le streaming des productions Evil Ed."
+> "L'architecture du POC a été pensée pour évoluer. En v2, on reste sur Docker Compose avec Coolify — c'est suffisant pour Sylius et la montée en charge initiale. En v3, si le trafic l'exige, on migre vers Kubernetes. Coolify v4 supporte nativement la connexion à un cluster K8s — on garde la même interface de gestion, on gagne l'orchestration K8s : auto-scaling, rolling deployments, haute disponibilité multi-nœuds."
 
 ---
 
