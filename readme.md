@@ -1,14 +1,14 @@
 # La Petite Maison de l'Épouvante — Demo Symfony
 
 Application de démonstration développée dans le cadre du projet CESI — BLOC 3.
-Fonctionnalité implémentée : **Catalogue produits sécurisé par JWT**.
+Fonctionnalité implémentée : **Catalogue produits sécurisé par authentification session**.
 
 ---
 
 ## Présentation
 
 Ce prototype illustre une approche **DevSecOps** complète :
-- API REST Symfony 7 avec authentification JWT
+- Application Symfony 7 avec authentification par session (formulaire de login + CSRF)
 - Pipeline CI/CD automatisé (GitHub Actions)
 - Déploiement continu via Coolify + Docker
 - Qualité mesurée en continu (SonarQube, PHPUnit, k6, Grafana Cloud)
@@ -22,7 +22,7 @@ Internet (HTTPS/TLS)
       │
   [ Nginx ]  ← reverse proxy + SSL termination
       │
-  [ PHP-FPM 8.4 ]  ← Symfony 7 + Lexik JWT + Doctrine ORM
+  [ PHP-FPM 8.4 ]  ← Symfony 7 + Security + Doctrine ORM
       │
   [ MySQL 8.0 ]  ← données persistantes
 ```
@@ -38,35 +38,21 @@ Internet (HTTPS/TLS)
 
 ---
 
-## Endpoints API
+## Routes principales
 
 | Méthode | Route | Auth requise | Description |
 |---|---|---|---|
-| `POST` | `/api/login` | Non | Authentification → JWT token |
-| `GET` | `/api/products` | Oui (Bearer) | Liste des produits |
-| `GET` | `/api/products/{id}` | Oui (Bearer) | Détail d'un produit |
+| `GET` | `/login` | Non | Page de connexion (formulaire + CSRF) |
+| `POST` | `/login` | Non | Soumission du formulaire → session |
+| `GET` | `/product` | Oui (session) | Catalogue produits → redirect `/login` si non connecté |
+| `GET` | `/` | Non | Page d'accueil |
 
-### Exemple d'utilisation
+### Comportement de sécurité
 
-**1. Obtenir un token JWT**
-```bash
-curl -X POST https://demo-nginx.dev.fabdevlab.fr/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"user@example.com","password":"password"}'
-```
-
-**2. Accéder au catalogue (sans token → 401)**
-```bash
-curl https://demo-nginx.dev.fabdevlab.fr/api/products
-# → HTTP 401 Unauthorized
-```
-
-**3. Accéder au catalogue (avec token → 200)**
-```bash
-curl https://demo-nginx.dev.fabdevlab.fr/api/products \
-  -H "Authorization: Bearer <TOKEN>"
-# → HTTP 200 + JSON
-```
+- Accès à `/product` sans session active → redirection `302` vers `/login`
+- Formulaire de login protégé par token CSRF (généré automatiquement par Symfony)
+- Mauvaises credentials → retour sur `/login` avec message d'erreur `.alert-danger`
+- Login valide → accès au catalogue (`200`)
 
 ---
 
@@ -81,7 +67,7 @@ Le pipeline GitHub Actions se déclenche sur chaque `push` sur la branche `dépl
 | 1 | **Build** | PHP 8.4, Composer install, cache vendor |
 | 2 | **Security Scan** | SonarQube SAST — vulnérabilités, code smells |
 | 3 | **Tests Unitaires** | PHPUnit — services, entités, logique métier |
-| 4 | **Tests Fonctionnels** | PHPUnit WebTestCase — routes JWT (401/200) + coverage |
+| 4 | **Tests Fonctionnels** | PHPUnit WebTestCase — sécurité session (redirect, login, catalogue) + coverage |
 | 5 | **Non-Régression Pré-Deploy** | Vérification baseline preprod (HTTP 200/302) |
 | 6 | **Deploy Preprod** | Webhook Coolify → redéploiement Docker automatique |
 | 7 | **Non-Régression Post-Deploy** | Vérification preprod après déploiement |
@@ -134,7 +120,6 @@ Créer un fichier `.env.local` (non versionné) avec :
 ```dotenv
 APP_SECRET=<valeur secrète>
 DATABASE_URL=mysql://<user>:<password>@mysql:3306/<database>?serverVersion=8.0
-JWT_PASSPHRASE=<passphrase>
 ```
 
 > Les valeurs de développement sont disponibles auprès du mainteneur du projet. Ne jamais committer de secrets dans le dépôt.
@@ -200,7 +185,7 @@ k6 cloud run k6/load-test.js
 | Framework | Symfony | 7.x |
 | Langage | PHP | 8.4 |
 | ORM | Doctrine | 3.x |
-| Auth | Lexik JWT Bundle | — |
+| Auth | Symfony Security (session + CSRF) | — |
 | Base de données | MySQL | 8.0 |
 | Serveur web | Nginx | Alpine |
 | Conteneurisation | Docker / Docker Compose | — |
