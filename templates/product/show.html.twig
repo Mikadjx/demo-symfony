@@ -4,16 +4,6 @@
 
 {% block body %}
 
-<nav class="navbar">
-  <a href="{{ path('app_home') }}" class="navbar-brand">
-    <span class="skull">💀</span> La Petite Maison de l'Épouvante
-  </a>
-  <ul class="navbar-links">
-    <li><a href="{{ path('app_home') }}">Accueil</a></li>
-    <li><a href="{{ path('product_index') }}">Admin</a></li>
-  </ul>
-</nav>
-
 <section class="crud-section">
   <div class="crud-header">
     <h1>{{ product.name }}</h1>
