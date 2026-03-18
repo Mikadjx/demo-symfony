@@ -1,234 +1,226 @@
-# 💀 La Petite Maison de l'Épouvante — Demo Symfony
-Application de démonstration développée dans le cadre du projet CESI.
-Fonctionnalité implémentée : **Catalogue produits avec recommandations**.
+# La Petite Maison de l'Épouvante — Demo Symfony
+
+Application de démonstration développée dans le cadre du projet CESI — BLOC 3.
+Fonctionnalité implémentée : **Catalogue produits sécurisé par JWT**.
 
 ---
 
-## Prérequis
-- [Docker Desktop](https://www.docker.com/)
-- [WSL2](https://learn.microsoft.com/fr-fr/windows/wsl/) avec **Ubuntu** — obligatoire sur Windows
-- [VS Code](https://code.visualstudio.com/) avec l'extension **Remote - WSL**
-- Git
+## Présentation
 
------
-
-## Installation (première fois uniquement)
-
-### 0 — Installer WSL2 et Ubuntu
-Dans **PowerShell en administrateur** :
-```powershell
-wsl --install
-```
-Redémarre le PC si demandé. Puis ouvre **Ubuntu** depuis le menu Démarrer.
-
-### 1 — Cloner le projet dans WSL2
-```bash
-cd ~
-git clone https://github.com/Mikadjx/demo-symfony.git
-cd demo-symfony
-```
-
-> ℹ️ **Emplacement du projet** : le projet est cloné dans WSL2 (`~/demo-symfony`), pas dans un dossier Windows (`D:\`). C'est intentionnel pour des raisons de performance : les I/O fichiers sont jusqu'à 10x plus rapides dans WSL2 que depuis un dossier monté Windows.
-
-### 2 — Créer les fichiers de configuration locaux
-```bash
-touch .env.local
-touch .env.dev.local
-touch .env.test.local
-```
-
-### 3 — Remplir `.env.local`
-```bash
-nano .env.local
-```
-Colle le contenu "database, puis sauvegarde avec `Ctrl+X` → `Y` → `Entrée` :
-```dotenv
-DATABASE_URL=mysql://MYSQL_USER:MYSQL_PASSWORD@mysql:3306/MYSQL_DATABASE?serverVersion=8.0
-```
-
-> ⚠️ Remplace `MYSQL_USER`, `MYSQL_PASSWORD` et `MYSQL_DATABASE` par les vraies valeurs. Contacte le mainteneur du projet pour les obtenir.
-
-### 4 — Remplir `.env.dev.local`
-```bash
-nano .env.dev.local
-```
-Colle le contenu suivant, puis sauvegarde avec `Ctrl+X` → `Y` → `Entrée` :
-```dotenv
-APP_SECRET=VOTRE_SECRET_ICI
-```
-
-> ⚠️ Remplace `VOTRE_SECRET_ICI` par la vraie valeur. Contacte le mainteneur du projet pour l'obtenir.
-
-### 5 — Lancer les conteneurs
-```bash
-docker compose up -d --build
-```
-
-### 6 — Installer les dépendances
-```bash
-docker exec symfony composer install
-```
-
-### 7 — Initialiser la base de données
-```bash
-docker exec symfony php bin/console doctrine:schema:create --no-interaction
-docker exec symfony php bin/console doctrine:fixtures:load --no-interaction
-```
-
-### 8 — Ouvrir le projet dans VS Code
-```bash
-code .
-```
-
-> VS Code s'ouvre directement connecté à WSL2. Le terminal intégré est déjà dans le bon dossier. Tu peux tout faire depuis VS Code : modifier le code, lancer des commandes Docker, faire tes `git add`, `commit`, `push`.
+Ce prototype illustre une approche **DevSecOps** complète :
+- API REST Symfony 7 avec authentification JWT
+- Pipeline CI/CD automatisé (GitHub Actions)
+- Déploiement continu via Coolify + Docker
+- Qualité mesurée en continu (SonarQube, PHPUnit, k6, Grafana Cloud)
 
 ---
 
-## Démarrage rapide (sessions suivantes)
-```bash
-# 1. Ouvrir Ubuntu depuis le menu Démarrer
-# 2. Aller dans le projet
-cd ~/demo-symfony
+## Architecture
 
-# 3. Démarrer les conteneurs
-docker compose up -d
-
-# 4. Ouvrir VS Code
-code .
+```
+Internet (HTTPS/TLS)
+      │
+  [ Nginx ]  ← reverse proxy + SSL termination
+      │
+  [ PHP-FPM 8.4 ]  ← Symfony 7 + Lexik JWT + Doctrine ORM
+      │
+  [ MySQL 8.0 ]  ← données persistantes
 ```
 
-------
-
-## URLs
-| Service | URL |
-|---|---|
-| Application Symfony | https://localhost:8080 |
-| API Produits | https://localhost:8080/api/products |
-| API Produit par ID | https://localhost:8080/api/products/{id} |
-| phpMyAdmin | https://localhost:8888 |
-
 ---
 
-## Connexion phpMyAdmin
-| Champ | Valeur |
-|---|---|
-| Serveur | mysql |
-| Utilisateur | voir `.env.local` |
-| Mot de passe | voir `.env.local` |
+## Environnements
 
----
-
-## Conteneurs Docker
-| Conteneur | Image | Rôle |
+| Environnement | URL | Notes |
 |---|---|---|
-| `symfony` | php:8.4-fpm-alpine | Application PHP |
-| `demo_symfony_nginx` | nginx:alpine | Serveur web |
-| `mysql` | mysql:8.0 | Base de données |
-| `phpmyadmin` | phpmyadmin | Interface BDD |
+| Preprod | `https://demo-nginx.dev.fabdevlab.fr/` | Déploiement automatique sur push |
+| SonarQube | `https://demo-sonarcube.dev.fabdevlab.fr` | Scan SAST (accès restreint) |
 
 ---
 
-## Workflow Git
-```bash
-# Modifier le code dans VS Code
-# Puis depuis le terminal VS Code :
+## Endpoints API
 
-git add .
-git commit -m "description de la modification"
-git push
+| Méthode | Route | Auth requise | Description |
+|---|---|---|---|
+| `POST` | `/api/login` | Non | Authentification → JWT token |
+| `GET` | `/api/products` | Oui (Bearer) | Liste des produits |
+| `GET` | `/api/products/{id}` | Oui (Bearer) | Détail d'un produit |
+
+### Exemple d'utilisation
+
+**1. Obtenir un token JWT**
+```bash
+curl -X POST https://demo-nginx.dev.fabdevlab.fr/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"user@example.com","password":"password"}'
 ```
 
----
-
-## Commandes utiles
-
-### Gestion des conteneurs
+**2. Accéder au catalogue (sans token → 401)**
 ```bash
-# Démarrer les conteneurs
-docker compose up -d
-
-#yyy
-# Démarrer et rebuilder les images
-docker compose up -d --build
-
-# Arrêter les conteneurs
-docker compose down
-
-# Arrêter et supprimer les volumes (repart de zéro)
-docker compose down -v
-
-# Voir l'état des conteneurs
-docker ps
-
-# Voir tous les conteneurs (même arrêtés)
-docker ps -a
+curl https://demo-nginx.dev.fabdevlab.fr/api/products
+# → HTTP 401 Unauthorized
 ```
 
-### Logs
+**3. Accéder au catalogue (avec token → 200)**
 ```bash
-# Logs du conteneur PHP (Symfony)
-docker logs symfony
-
-# Logs de Nginx
-docker logs demo_symfony_nginx
-
-# Logs en temps réel (suivre les logs)
-docker logs -f symfony
-docker logs -f demo_symfony_nginx
-
-# Logs Symfony applicatifs
-docker exec symfony cat var/log/dev.log
-```
-
-### Accès aux conteneurs
-```bash
-# Accéder au shell du conteneur PHP
-docker exec -it symfony sh
-
-# Accéder au shell MySQL
-docker exec -it mysql mysql -u demo -p
-```
-
-### Symfony
-```bash
-# Vider le cache
-docker exec symfony php bin/console cache:clear
-
-# Installer les dépendances
-docker exec symfony composer install
-
-# Recharger les fixtures
-docker exec symfony php bin/console doctrine:fixtures:load --no-interaction
-
-# Valider le schéma de base de données
-docker exec symfony php bin/console doctrine:schema:validate
-
-# Recréer le schéma de base de données
-docker exec symfony php bin/console doctrine:schema:create --no-interaction
-
-# Lister toutes les routes
-docker exec symfony php bin/console debug:router
+curl https://demo-nginx.dev.fabdevlab.fr/api/products \
+  -H "Authorization: Bearer <TOKEN>"
+# → HTTP 200 + JSON
 ```
 
 ---
 
 ## Pipeline CI/CD
-Le pipeline GitHub Actions se déclenche à chaque `git push` sur `main` :
-1. Checkout du code
-2. Installation PHP 8.4
-3. Installation des dépendances Composer
-4. Lancement des tests unitaires
-5. Build de l'image Docker
+
+Le pipeline GitHub Actions se déclenche sur chaque `push` sur la branche `déploiement-fonctionnelle`.
+
+### Étapes séquentielles (toutes bloquantes)
+
+| # | Job | Description |
+|---|-----|-------------|
+| 1 | **Build** | PHP 8.4, Composer install, cache vendor |
+| 2 | **Security Scan** | SonarQube SAST — vulnérabilités, code smells |
+| 3 | **Tests Unitaires** | PHPUnit — services, entités, logique métier |
+| 4 | **Tests Fonctionnels** | PHPUnit WebTestCase — routes JWT (401/200) + coverage |
+| 5 | **Non-Régression Pré-Deploy** | Vérification baseline preprod (HTTP 200/302) |
+| 6 | **Deploy Preprod** | Webhook Coolify → redéploiement Docker automatique |
+| 7 | **Non-Régression Post-Deploy** | Vérification preprod après déploiement |
+| 8 | **Load Test** | k6 cloud → métriques envoyées à Grafana Cloud |
+
+---
+
+## Conteneurs Docker
+
+| Service | Image | Rôle |
+|---|---|---|
+| `php` | `php:8.4-fpm-alpine` | Application Symfony (PHP-FPM) |
+| `nginx` | `nginx:alpine` | Serveur web + SSL |
+| `mysql` | `mysql:8.0` | Base de données |
+| `phpmyadmin` | `phpmyadmin` | Interface BDD (preprod uniquement) |
+| `sonarqube` | `sonarqube:community` | Analyse statique (dev local) |
+
+> **Sécurité** : phpMyAdmin est désactivé en production. SonarQube n'est exposé qu'en local ou via l'instance dédiée.
+
+---
+
+## Développement local
+
+### Prérequis
+- Docker Desktop (Linux, macOS ou Windows avec WSL2)
+- Git
+
+### Lancement
+
+```bash
+# 1. Cloner le projet
+git clone https://github.com/Mikadjx/demo-symfony.git
+cd demo-symfony
+
+# 2. Configurer les variables d'environnement locales
+# Créer .env.local avec les valeurs de votre environnement
+# (contacter le mainteneur pour les valeurs — ne pas committer)
+
+# 3. Démarrer les conteneurs
+docker compose up -d --build
+
+# 4. Initialiser la base de données (première fois)
+docker exec php php bin/console doctrine:migrations:migrate --no-interaction
+docker exec php php bin/console doctrine:fixtures:load --no-interaction
+```
+
+### Variables d'environnement requises
+
+Créer un fichier `.env.local` (non versionné) avec :
+```dotenv
+APP_SECRET=<valeur secrète>
+DATABASE_URL=mysql://<user>:<password>@mysql:3306/<database>?serverVersion=8.0
+JWT_PASSPHRASE=<passphrase>
+```
+
+> Les valeurs de développement sont disponibles auprès du mainteneur du projet. Ne jamais committer de secrets dans le dépôt.
+
+### Commandes utiles
+
+```bash
+# Conteneurs
+docker compose up -d          # Démarrer
+docker compose down           # Arrêter
+docker compose down -v        # Arrêter + supprimer les volumes
+docker compose up -d --build  # Reconstruire les images
+
+# Symfony
+docker exec php php bin/console cache:clear
+docker exec php php bin/console doctrine:migrations:migrate --no-interaction
+docker exec php php bin/console doctrine:fixtures:load --no-interaction
+docker exec php php bin/console debug:router
+
+# Logs
+docker logs -f php
+docker logs -f nginx
+
+# Accès shell
+docker exec -it php sh
+```
+
+---
+
+## Tests
+
+### Lancer les tests localement
+
+```bash
+# Tests unitaires
+php vendor/bin/phpunit --testsuite=unit --testdox
+
+# Tests fonctionnels (nécessite MySQL démarré)
+php vendor/bin/phpunit --testsuite=functional --testdox
+
+# Avec coverage
+php -d memory_limit=512M vendor/bin/phpunit \
+  --testsuite=functional \
+  --coverage-clover coverage.xml
+```
+
+### Test de charge (k6)
+
+```bash
+# Local (sans cloud)
+k6 run -e BASE_URL=https://demo-nginx.dev.fabdevlab.fr k6/load-test.js
+
+# Via Grafana Cloud (pipeline CI)
+k6 cloud run k6/load-test.js
+```
 
 ---
 
 ## Technologies
-- **PHP** 8.4
-- **Symfony** 7.x
-- **Doctrine ORM**
-- **MySQL** 8.0
-- **Nginx** Alpine
-- **Docker** / Docker Compose
-- **GitHub Actions** CI/CD
 
+| Couche | Technologie | Version |
+|---|---|---|
+| Framework | Symfony | 7.x |
+| Langage | PHP | 8.4 |
+| ORM | Doctrine | 3.x |
+| Auth | Lexik JWT Bundle | — |
+| Base de données | MySQL | 8.0 |
+| Serveur web | Nginx | Alpine |
+| Conteneurisation | Docker / Docker Compose | — |
+| CI/CD | GitHub Actions | — |
+| Déploiement | Coolify | — |
+| Qualité | SonarQube | Community |
+| Tests charge | k6 | — |
+| Observabilité | Grafana Cloud | — |
 
+---
+
+## Workflow Git
+
+La branche de déploiement est `déploiement-fonctionnelle`. Tout push sur cette branche déclenche le pipeline complet.
+
+```bash
+git checkout déploiement-fonctionnelle
+git add <fichiers modifiés>
+git commit -m "description claire de la modification"
+git push origin déploiement-fonctionnelle
+```
+
+> Ne pas pousser directement sur `main`. Les pull requests passent par la revue de code.
