@@ -5,291 +5,427 @@
 
 ## OBJECTIF
 
-Ce document est un guide de révision pour maîtriser les concepts techniques abordés dans la présentation. Le jury est spécialiste — la précision du vocabulaire et la capacité à expliquer les choix sont évaluées.
+Ce document prépare les réponses aux questions du jury. Chaque section couvre un concept technique réellement présent dans le projet, avec les détails à maîtriser et les questions probables.
 
 ---
 
-## 1. ISO 25010 — Qualité Logicielle
+## 1. ISO 25010 — Les 4 Indicateurs du Projet
 
-### À savoir par cœur
-- ISO 25010 = norme internationale de qualité produit logiciel (remplace ISO 9126)
-- 8 caractéristiques principales : **Functional Suitability, Performance Efficiency, Compatibility, Usability, Reliability, Security, Maintainability, Portability**
-- On en a sélectionné 4 : Fiabilité, Maintenabilité, Sécurité, Performance
+### À savoir par cœur : définition et mesure de chaque indicateur
 
-### Pour chaque indicateur, savoir expliquer :
-1. **IND-01 Fiabilité (PHPUnit coverage)** : pourquoi la couverture de tests prévient la dette technique ? → Zone non testée = comportement inconnu en production → regression silencieuse
-2. **IND-02 Maintenabilité (SonarQube code smells)** : qu'est-ce qu'un code smell ? → duplication, méthodes trop longues, couplage fort, nommage ambigu
-3. **IND-03 Sécurité (SonarQube SAST)** : différence SAST vs DAST ? → SAST = analyse statique du code source (sans exécution) / DAST = analyse dynamique sur app en cours d'exécution
-4. **IND-04 Performance (k6 + Grafana)** : que mesure k6 ? → `http_req_duration` (latence), `http_reqs` (throughput), `http_req_failed` (taux erreur), `vus` (virtual users)
+**IND-01 — Fiabilité** (outil : PHPUnit `--coverage-clover`)
+- Couverture de tests : % des lignes/branches de `src/` couvertes par les tests
+- Pourquoi ça prévient la dette : une zone non couverte = comportement inconnu en production = future régression silencieuse
+- Rapport généré : `coverage.xml` dans les artefacts GitHub Actions
+
+**IND-02 — Maintenabilité** (outil : SonarQube)
+- Code smells détectés : méthodes trop longues, duplication, nommage ambigu, couplage fort
+- Dette technique estimée : temps pour corriger l'ensemble des code smells
+- Quality Gate : seuil configuré → le pipeline échoue si dépasse le seuil
+
+**IND-03 — Sécurité** (outil : SonarQube SAST)
+- Vulnérabilités détectées : injections SQL, XSS, mauvaise gestion des secrets, CVE dans les dépendances
+- SAST = Static Application Security Testing : analyse du code source sans exécuter l'application
+- Objectif : 0 CVE critique ou haute
+
+**IND-04 — Performance** (outil : k6 + Grafana Cloud)
+- `http_req_duration p(95) < 200 ms` : 95% des requêtes sous 200ms
+- `http_req_failed rate < 1%` : moins de 1% d'erreurs
+- Seuil 200ms : référence UX (au-delà, l'utilisateur perçoit un délai — standard Google RAIL model)
 
 ### Question jury probable
-> "Comment tu justifies le seuil de 200ms ?"
-→ Référence UX : au-delà de 200ms, l'utilisateur perçoit un délai. Standard industry (Google RAIL model). Sur une API catalogue, le SLA cible est < 100ms p95.
+> "Comment ces indicateurs préviennent concrètement la dette technique ?"
+
+Réponse : IND-01 évite les régressions silencieuses (code non testé = dette latente). IND-02 signale la dégradation architecturale avant qu'elle devienne irréversible. IND-03 empêche des failles de s'accumuler. IND-04 détecte les dégradations de performance avant qu'elles atteignent la production.
 
 ---
 
-## 2. DevSecOps — Concepts fondamentaux
+## 2. CatalogueService — Logique Métier Testée
 
-### Définition à maîtriser
-DevSecOps = intégration de la sécurité dans chaque phase du cycle DevOps, plutôt qu'en fin de développement ("Security by Design" vs "Security by Afterthought").
+### Ce que fait le service (fichier : `src/Service/CatalogueService.php`)
 
-### Les 3 piliers à connaître
-1. **Shift Left Security** : détecter les failles le plus tôt possible (coût de correction x100 entre dev et prod)
-2. **Infrastructure as Code** : docker-compose.yml, Dockerfile, ci.yml → tout est versionné, reproductible, auditable
-3. **Automated Gates** : chaque étape du pipeline est un contrôle bloquant (fail-fast)
+```php
+filterAvailableProducts(array $products): array
+// → array_filter sur stock > 0
+// Règle métier : un produit épuisé n'apparaît pas dans le catalogue
 
-### Pratiques DevSecOps dans le projet
-| Stage | Pratique | Outil |
-|-------|---------|-------|
-| Code | Pas de secrets en clair | `.gitignore` du `.env`, GitHub Secrets |
-| Commit | Analyse statique | SonarQube SAST |
-| Build | Image minimale | Alpine Linux (surface d'attaque réduite) |
-| Test | JWT testé (401/200) | PHPUnit WebTestCase |
-| Deploy | HTTPS obligatoire | TLS Nginx, webhook token |
-| Runtime | Logs centralisés | Monolog → Grafana Cloud |
+filterByCategory(array $products, string $category): array
+// → array_filter sur category === $category
+// Catégories présentes : figurines, blu-ray, fanzine, jeux
+
+sortByPriceAsc(array $products): array
+// → usort sur (float) price
+// Résultat : du moins cher (7,99€ Fanzine) au plus cher (89,99€ Jeu Cthulhu Wars)
+```
+
+### Ce que testent les 9 tests unitaires (`CatalogueServiceTest`)
+
+| Test | Ce qu'il vérifie |
+|------|-----------------|
+| `testAllFixtureProductsAreAvailable` | Les 8 fixtures (stock > 0) passent toutes le filtre |
+| `testEpuisedProductIsExcludedFromCatalogue` | Produit stock=0 est exclu |
+| `testReturnsEmptyWhenAllProductsAreOutOfStock` | Liste vide si tout épuisé |
+| `testFilterFigurinesReturnsOnlyFigurines` | 2 figurines dans les fixtures |
+| `testFilterBluRayReturnsOnlyBluRays` | 2 blu-ray dans les fixtures |
+| `testFilterFanzineReturnsOnlyFanzines` | 2 fanzines dans les fixtures |
+| `testFilterUnknownCategoryReturnsEmpty` | Catégorie inexistante → tableau vide |
+| `testSortByPriceAscReturnsChepeastFirst` | Fanzine Heroic Fantasy (7,99€) en premier |
+| `testSortByPriceAscIsSortedCorrectly` | Chaque prix ≤ au suivant (validation complète) |
+
+### Pourquoi ces tests sont des "tests unitaires" ?
+- Pas de base de données, pas de conteneur Docker
+- `CatalogueService` n'a aucune dépendance externe (pas de constructeur avec injection)
+- On crée les entités `Product` directement dans le test (`new Product()`)
+- Exécution en millisecondes, aucun setup requis
+
+---
+
+## 3. RecommendationService — Tests avec Mocks
+
+### Ce que fait le service (`src/Service/RecommendationService.php`)
+
+```php
+getRecommendations(Product $product): array
+// → Consulte le cache avec clé "recommendations_{id}"
+// → Si absent du cache : appelle ProductRepository::findByCategory($category, $currentId)
+// → Met en cache TTL 300s
+// → Retourne les produits de la même catégorie (hors le produit courant)
+```
+
+### Pourquoi utiliser des mocks dans les tests ?
+
+`RecommendationService` dépend de 2 collaborateurs :
+- `ProductRepository` : accès base de données
+- `CacheInterface` : accès cache Symfony
+
+En tests unitaires, on ne veut pas de vraie BDD ni de vrai cache. On **mock** ces dépendances :
+
+```php
+$productRepository = $this->createMock(ProductRepository::class);
+$productRepository->expects($this->once())
+    ->method('findByCategory')
+    ->with('masques', 1)           // vérif des arguments passés
+    ->willReturn([$recommended1, $recommended2]);
+```
+
+Le mock vérifie :
+1. Que `findByCategory` est appelé exactement 1 fois
+2. Avec les bons arguments (`'masques'`, id=1)
+3. Et retourne ce qu'on lui dit de retourner
+
+### Les 3 tests de `RecommendationServiceTest`
+
+| Test | Ce qu'il vérifie |
+|------|-----------------|
+| `testGetRecommendationsReturnsSameCategoryProducts` | 2 produits de même catégorie retournés |
+| `testGetRecommendationsReturnsEmptyArrayWhenNoProducts` | Tableau vide si aucun similaire |
+| `testGetRecommendationsUsesCacheKey` | Clé cache contient `recommendations_` |
 
 ### Question jury probable
-> "Quelle est la différence entre SonarQube et OWASP ZAP ?"
-→ SonarQube = SAST (analyse le code sans l'exécuter, avant déploiement). OWASP ZAP = DAST (attaque l'application déployée depuis l'extérieur). Les deux sont complémentaires. Dans ma V2, j'ajouterais OWASP ZAP en post-deploy.
+> "Pourquoi ne pas tester directement avec la base de données ?"
+
+Réponse : Les tests unitaires doivent être rapides, isolés et déterministes. Avec une vraie BDD, le test dépend de l'état de la base, de la connexion réseau, et prend 10 à 100x plus de temps. Les mocks isolent le comportement du service de son infrastructure.
 
 ---
 
-## 3. Pipeline CI/CD — Maîtrise du fichier `ci.yml`
+## 4. Tests Fonctionnels — Session Auth & WebTestCase
 
-### Structure à expliquer
-- **Déclencheur** : push/PR sur `déploiement-fonctionnelle` (branche de production)
-- **8 jobs séquentiels** via `needs:` → chaque job attend le précédent
-- **Cache vendor** : `actions/cache@v4` sur `composer.lock` → évite de télécharger les dépendances à chaque run
+### Ce qu'est PHPUnit WebTestCase
 
-### Jobs à savoir expliquer en détail
-1. **build** : setup PHP 8.4, composer install, clear cache test → prépare l'environnement
-2. **security-scan** : SonarQube via `sonarsource/sonarqube-scan-action` → analyse `src/` et `tests/`
-3. **test-unit** : PHPUnit suite `unit` → teste les services et entités en isolation
-4. **test-functional** : PHPUnit suite `functional` avec MySQL service GitHub Actions → teste les routes HTTP réelles avec BDD
-5. **non-regression-pre** : `curl` sur la preprod actuelle → vérif baseline avant déploiement
-6. **deploy** : webhook Coolify → déclenche le redéploiement Docker
-7. **non-regression-post** : même vérifications après 30s → garantit que le déploiement n'a pas cassé la prod
-8. **load-test** : k6 cloud avec credentials depuis secrets → envoie les métriques à Grafana Cloud
+`WebTestCase` est une classe Symfony qui simule un client HTTP complet, sans démarrer un vrai serveur :
+- Lance le kernel Symfony en mode `test`
+- Crée un client qui envoie de vraies requêtes HTTP internes
+- Accède à la vraie base de données (MySQL service éphémère dans GitHub Actions)
+- Peut suivre les redirections, soumettre des formulaires, inspecter le HTML
+
+### Les 4 tests de `CatalogueSecurityTest`
+
+```php
+testCatalogueRedirectsToLoginWhenNotAuthenticated()
+// GET /product → assertResponseRedirects('/login')
+// Vérifie : route protégée sans auth = redirect 302
+
+testLoginPageIsAccessible()
+// GET /login → assertResponseIsSuccessful() + assertResponseStatusCodeSame(200)
+// Vérifie : page de login accessible à tous
+
+testLoginFailsWithInvalidCredentials()
+// GET /login → submitForm('login', bad credentials) → followRedirect()
+// assertSelectorExists('.alert-danger')
+// Vérifie : mauvaises credentials → message d'erreur visible
+
+testAuthenticatedUserCanAccessCatalogue()
+// createUser() → login → GET /product → assertResponseStatusCodeSame(200)
+// Vérifie : utilisateur authentifié accède au catalogue
+```
+
+### MySQL service éphémère dans GitHub Actions
+
+```yaml
+services:
+  mysql:
+    image: mysql:8.0
+    env:
+      MYSQL_DATABASE: demo_test
+      MYSQL_USER: demo_user
+      MYSQL_PASSWORD: demo_password
+    options: --health-cmd="mysqladmin ping -h localhost"
+```
+
+Le job `test-functional` :
+1. Démarre MySQL dans un conteneur de service
+2. Exécute `doctrine:migrations:migrate` → crée le schéma
+3. Exécute `doctrine:fixtures:load` → insère les données de test
+4. Lance PHPUnit avec `--coverage-clover coverage.xml`
+
+---
+
+## 5. Pipeline CI/CD — Maîtrise de `ci.yml`
+
+### Points techniques à connaître sur chaque job
+
+**Job 1 — Build**
+- Cache vendor avec `actions/cache@v4` sur `hashFiles('composer.lock')` → si composer.lock n'a pas changé, vendor est restauré depuis le cache (économise 30-60s)
+
+**Job 2 — Security Scan**
+- `sonarsource/sonarqube-scan-action@master` se connecte à `demo-sonarcube.dev.fabdevlab.fr`
+- Arguments : `-Dsonar.projectKey=Demo-symfony -Dsonar.sources=src -Dsonar.tests=tests`
+- Token dans `${{ secrets.SONAR_TOKEN }}` → jamais en clair dans le code
+
+**Job 5 — Non-Régression Pré-Deploy**
+- Vérifie l'état ACTUEL de la preprod avant de la modifier
+- 3 checks : `/` → 200, `/login` → 200, `/product` → 302 (redirect non auth)
+- S'exécute seulement sur `push` (pas sur `pull_request`)
+
+**Job 6 — Deploy**
+- Webhook Coolify : `curl -X GET "${{ secrets.COOLIFY_WEBHOOK_URL }}" -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"`
+- Coolify reçoit le webhook → pull la nouvelle image → redémarre les conteneurs
+
+**Job 8 — Load Test**
+- `k6 cloud run` envoie les résultats à Grafana Cloud (token dans `${{ secrets.GRAFANA_TOKEN }}`)
+- Zone : `amazon:fr:paris` (simulation depuis Paris)
+- Variables injectées : `BASE_URL`, `K6_USERNAME`, `K6_PASSWORD`
 
 ### Question jury probable
-> "Pourquoi une non-régression pré ET post-déploiement ?"
-→ Pré = s'assurer que la preprod est dans un état stable AVANT de la modifier (baseline). Post = vérifier que le nouveau déploiement n'a pas introduit de régression. Sans la pré, on ne sait pas si un échec post est dû au déploiement ou à un état antérieur dégradé.
+> "Pourquoi 8 jobs séquentiels et pas en parallèle ?"
+
+Réponse : La séquence est intentionnelle. On ne déploie que si les tests passent. On ne charge que si le déploiement a réussi. Les jobs en parallèle permettraient de déployer même si les tests échouent — ce qui est exactement ce qu'on veut éviter.
 
 ---
 
-## 4. JWT (JSON Web Token) — Fonctionnement
+## 6. k6 — Scénario de Charge Réel
 
-### Structure d'un JWT
+### Pourquoi k6 doit extraire le CSRF
+
+Symfony génère un token CSRF unique par session sur le formulaire de login. k6 doit :
+1. Faire un GET `/login` pour obtenir la page HTML
+2. Parser le HTML pour extraire `<input name="_csrf_token" value="...">`
+3. Inclure ce token dans le POST du formulaire
+
+```javascript
+const csrfToken = loginPage.html().find('input[name="_csrf_token"]').attr('value');
+const res = http.post(`${BASE_URL}/login`, {
+  _username: __ENV.K6_USERNAME,
+  _password: __ENV.K6_PASSWORD,
+  _csrf_token: csrfToken,
+}, { redirects: 5 });
 ```
-Header.Payload.Signature
-eyJhbGciOiJSUzI1NiJ9 . eyJ1c2VybmFtZSI6InVzZXIifQ . [signature RSA]
+
+C'est la preuve que la protection CSRF est active : si k6 n'incluait pas le token, la connexion échouerait.
+
+### Paramètres du test et leur signification
+
+```javascript
+stages: [
+  { duration: '30s', target: 10  },   // montée progressive (warm-up)
+  { duration: '1m',  target: 50  },   // charge nominale
+  { duration: '30s', target: 100 },   // pic de charge (stress)
+  { duration: '30s', target: 0   },   // descente (cool-down)
+]
 ```
-- **Header** : algorithme (`RS256` = RSA asymétrique)
-- **Payload** : claims (username, expiration `exp`, issued at `iat`)
-- **Signature** : chiffrée avec la clé privée → vérifiée avec la clé publique
 
-### Lexik JWT Bundle (Symfony)
-- Génère le token à `POST /api/login` via `JWTTokenManagerInterface`
-- Vérifie le token sur chaque requête sécurisée via `security.yaml` (firewall `api`)
-- TTL configuré dans `config/packages/lexik_jwt_authentication.yaml`
+**Seuils (thresholds) :**
+- `http_req_duration p(95) < 200` : 95% des requêtes doivent répondre en moins de 200ms
+- `http_req_failed rate < 0.01` : moins de 1% d'erreurs HTTP
 
-### Pourquoi RSA (asymétrique) plutôt que HMAC (symétrique) ?
-- RSA : clé privée signe, clé publique vérifie → un service peut vérifier sans avoir la clé secrète
-- HMAC : même clé pour signer et vérifier → si partagée avec un service externe, risque de compromission
+Si les seuils ne sont pas respectés → k6 retourne un code d'erreur → le job 8 échoue.
 
 ### Question jury probable
-> "Comment gères-tu l'expiration du token ?"
-→ TTL actuellement configuré à [valeur dans lexik_jwt.yaml]. En V2 : TTL court (15 min) + refresh token endpoint → limite l'impact d'un token volé.
+> "Quel est le lien entre k6 et ISO 25010 ?"
+
+Réponse : k6 mesure directement IND-04 (Performance). Le seuil `p(95) < 200ms` est l'indicateur concret. Si Grafana Cloud montre une dégradation du p95 sur plusieurs runs, c'est un signal que la dette de performance s'accumule — ce qui justifie des actions correctives (cache, scaling).
 
 ---
 
-## 5. Docker & Conteneurisation
+## 7. Sécurité — Authentification Session & CSRF
 
-### Architecture Docker Compose du projet
-```
-php (php:8.4-fpm-alpine)
-    ↕ réseau Docker interne
-nginx (nginx:alpine + SSL)     ← expose 80/443 vers l'extérieur
-    ↕ réseau Docker interne
-mysql (mysql:8.0)              ← healthcheck avant démarrage php
-phpmyadmin                     ← preprod uniquement
-sonarqube (community)          ← local / CI uniquement
-```
+### Session vs JWT — Pourquoi l'app utilise la session pour le web
 
-### Points techniques à maîtriser
-1. **`depends_on: service_healthy`** : php ne démarre que quand MySQL répond au `mysqladmin ping` → évite les erreurs de connexion au démarrage
-2. **PHP-FPM** : FastCGI Process Manager → nginx délègue les requêtes PHP à php-fpm via socket/TCP → découplage web server / PHP engine
-3. **Alpine Linux** : image minimale (~5MB vs ~100MB Debian) → moins de paquets = moins de CVE potentiels
-4. **Multi-stage build** : non utilisé actuellement → amélioration V2 pour séparer build (with composer) et runtime (sans composer)
+| Critère | Session (web) | JWT (API) |
+|---------|--------------|-----------|
+| Cas d'usage | Navigateur, formulaire HTML | API REST, client mobile/React |
+| Stockage | Côté serveur (BDD ou cache) | Côté client (localStorage/cookie) |
+| CSRF | Protection nécessaire (Symfony l'intègre) | Pas de CSRF (pas de cookie) |
+| Révocation | Immédiate (suppression session BDD) | Nécessite une liste de révocation |
+
+L'application a les deux : session pour l'interface web (`/product`, `/admin`), JWT disponible pour l'API REST (`/api/products`).
+
+### Protection CSRF dans Symfony
+
+Symfony génère automatiquement un token CSRF pour tous les formulaires déclarés avec `FormType` ou la configuration security. Le token est :
+- Généré par `csrf_token('authenticate')`
+- Lié à la session utilisateur
+- Vérifié par le firewall Symfony à chaque POST
 
 ### Question jury probable
-> "Pourquoi ne pas mettre SonarQube dans le pipeline plutôt qu'en conteneur ?"
-→ SonarQube dans le docker-compose sert au développement local. Dans le pipeline, on utilise `sonarqube-scan-action` qui se connecte au SonarQube déployé sur `demo-sonarcube.dev.fabdevlab.fr` (instance hébergée). Les deux sont complémentaires.
+> "Comment tu aurais fait si le frontend était React ?"
+
+Réponse : React consommerait l'API REST avec JWT. Le flux serait : POST `/api/login` → token JWT → Authorization: Bearer dans chaque requête. C'est d'ailleurs prévu en V2 — l'API JWT est déjà disponible dans `src/Controller/Api/ProductController.php`.
 
 ---
 
-## 6. Coolify — Plateforme de déploiement
+## 8. Docker & Architecture Conteneurs
 
-### Qu'est-ce que Coolify ?
-- PaaS self-hosted (alternative à Heroku, Vercel, Railway)
-- Déploiement automatique via webhooks depuis GitHub/GitLab
-- Gestion des conteneurs Docker, des certificats TLS, des variables d'environnement
-- Dashboard de monitoring des conteneurs
+### Dépendances entre conteneurs
 
-### Avantages vs déploiement manuel
-| Manuel | Coolify |
-|--------|---------|
-| `ssh` → `docker compose down && docker compose up` | Webhook HTTP déclenché automatiquement |
-| Certificats SSL manuels (certbot) | TLS automatique Let's Encrypt |
-| Variables d'env en `.env` sur le serveur | Interface sécurisée de gestion des secrets |
-| Monitoring via `docker ps` | Dashboard web avec logs et état |
-
-### Pourquoi Coolify plutôt que Kubernetes en V1 ?
-→ Coolify est adapté à un prototype/POC : déploiement rapide, configuration simple, pas de cluster à gérer. K8s est prévu en V2 pour le scaling et la haute disponibilité nécessaires en production.
-
----
-
-## 7. Tests — Types et Outils
-
-### Tableau de synthèse
-| Type | Outil | Ce qu'il teste | Métrique ISO 25010 |
-|------|-------|---------------|-------------------|
-| **Unitaires** | PHPUnit | Services, entités en isolation (mock des dépendances) | Fiabilité |
-| **Fonctionnels** | PHPUnit WebTestCase | Routes HTTP, codes retour, authentification JWT | Fiabilité + Sécurité |
-| **Non-régression** | curl (GitHub Actions) | Comportement baseline pre/post-déploiement | Fiabilité |
-| **Charge** | k6 | Latence, throughput, taux d'erreur sous charge | Performance |
-
-### PHPUnit WebTestCase
-- Simule des requêtes HTTP dans Symfony sans démarrer un vrai serveur
-- Accède à la BDD de test (MySQL service dans GitHub Actions)
-- Exemple : `$this->client->request('GET', '/api/products')` → vérifie `$this->assertResponseStatusCodeSame(401)`
-
-### k6 — Script de charge
-- Scénario dans `k6/load-test.js` : login → récupère token → GET /api/products
-- Paramètres : Virtual Users (VUs), duration, rampe (stages)
-- Résultats envoyés à Grafana Cloud via `k6 cloud run`
-
----
-
-## 8. Kubernetes — Concepts pour la V2
-
-### Pourquoi K8s est nécessaire pour la scalabilité ?
-Docker Compose = orchestration single-host. Kubernetes = orchestration multi-node avec :
-- **HPA (Horizontal Pod Autoscaler)** : scale automatiquement les replicas en fonction du CPU/RAM
-- **Rolling Updates** : déploiement sans downtime (nouveaux pods avant suppression des anciens)
-- **Self-healing** : redémarre automatiquement les pods crashés
-- **Ingress** : routing HTTP/HTTPS centralisé (remplace la config nginx manuelle)
-
-### Architecture K8s pour le projet
-```
-Ingress (Nginx/Traefik)
-  ├── /         → Service symfony-svc → Deployment symfony (3 replicas, HPA)
-  └── /phpmyadmin → Service phpmyadmin-svc (namespace preprod seulement)
-
-StatefulSet mysql → PVC (persistance des données indépendante des pods)
-
-HPA: symfony
-  minReplicas: 2
-  maxReplicas: 10
-  targetCPUUtilizationPercentage: 80
+```yaml
+php:
+  depends_on:
+    mysql:
+      condition: service_healthy   # attend que MySQL réponde avant de démarrer
 ```
 
-### K3d pour le POC local
-- K3d = K3s (K8s léger) dans Docker → permet de simuler un cluster K8s en local
-- Commande : `k3d cluster create mycluster --agents 2`
-- Iso-production : même configuration que le cluster de production
+**Healthcheck MySQL :**
+```yaml
+options: --health-cmd="mysqladmin ping -h localhost" --health-interval=5s --health-retries=10
+```
+→ php-fpm ne démarre que quand MySQL est prêt. Évite les erreurs "Connection refused" au démarrage.
+
+### PHP-FPM vs Apache
+
+PHP-FPM (FastCGI Process Manager) : nginx reçoit la requête HTTP → la transmet à php-fpm via socket TCP → php-fpm exécute Symfony → renvoie le résultat à nginx. Avantages : nginx et PHP sont découplés, nginx peut servir les assets statiques directement, meilleure gestion de la concurrence.
+
+### Alpine Linux
+
+`php:8.4-fpm-alpine` : image ~30MB vs ~200MB pour la version Debian. Moins de paquets = moins de CVE potentiels. SonarQube peut scanner l'image pour détecter des CVE dans les dépendances système.
+
+---
+
+## 9. Kubernetes — Arguments pour la V2
+
+### Problèmes actuels (V1 Docker Compose) identifiés par les tests
+
+1. **Single replica PHP-FPM** → un seul processus gère toutes les requêtes → saturation CPU à 100 VUs
+2. **Pas de cache catalogue** → MySQL sollicité à chaque requête → latence qui monte sous charge
+3. **Pas de rate limiting** → `/login` peut être attaqué par brute force sans limite
+4. **Single host** → si le serveur tombe, l'app est indisponible
+
+### Comment K8s résout chaque problème
+
+| Problème V1 | Solution K8s |
+|-------------|-------------|
+| Single replica | HPA : `minReplicas: 2, maxReplicas: 10, targetCPUUtilizationPercentage: 80` |
+| Pas de cache | Helm chart Redis + annotation cache Symfony |
+| Pas de rate limiting | Ingress Nginx/Traefik : `nginx.ingress.kubernetes.io/limit-rps` |
+| Single host | Multi-node cluster, auto-restart des pods crashés |
+
+### K3d — POC local
+
+K3d = K3s (Kubernetes allégé) dans Docker. Permet de simuler un cluster K8s en local :
+```bash
+k3d cluster create maison-epouvante --agents 2
+kubectl apply -f k8s/deployment.yml
+```
+Même configuration YAML qu'en production → "iso-production" validé avant déploiement.
 
 ### Question jury probable
-> "Qu'est-ce que l'HPA et comment ça aurait aidé dans ton stress test ?"
-→ HPA = Horizontal Pod Autoscaler. Il surveille les métriques CPU/RAM d'un Deployment et crée automatiquement des replicas supplémentaires quand un seuil est dépassé. Lors de mon stress test, le CPU PHP-FPM a saturé à 100%. Avec HPA configuré à 80% CPU, Kubernetes aurait créé 2, 3, puis N replicas pour absorber la charge.
+> "Qu'est-ce que l'HPA et comment ça aide pour Halloween ?"
+
+Réponse : HPA (Horizontal Pod Autoscaler) surveille les métriques CPU/RAM d'un Deployment K8s. Quand le CPU de php-fpm dépasse 80%, K8s crée automatiquement un nouveau pod (une nouvelle instance). Pour Halloween avec 10x le trafic normal, l'HPA créerait 5-10 répliques automatiquement, puis les supprimerait après le pic. Avec Docker Compose, c'est une intervention manuelle.
 
 ---
 
-## 9. Plan de Remédiation — Argumentaire
+## 10. Plan de Remédiation — Justifications Techniques
 
-### Pour chaque vulnérabilité, savoir justifier la priorité
+### R1 — phpMyAdmin en production (CRITIQUE)
 
-**🔴 CRITIQUE — phpMyAdmin exposé en prod**
-- Risque : accès direct à la BDD sans authentification forte → lecture/modification/suppression des données
-- Action : `PHPMYADMIN_ALLOW_ANY_ROOT=false`, restriction IP via Nginx, désactivation totale en prod
-- Standard : CIS Benchmark Docker / OWASP API Security Top 10
+**Risque concret :** phpMyAdmin donne un accès direct à toute la base de données via une interface web. Si les credentials MySQL sont faibles ou si l'interface a une vulnérabilité (CVE connues sur phpMyAdmin), un attaquant peut lire les données utilisateurs, modifier les prix, supprimer le catalogue.
 
-**🔴 CRITIQUE — Secrets `.env` non chiffrés**
-- Risque : si le dépôt est compromis (ou un collaborateur malveillant), les credentials DB et JWT privkeys sont exposés
-- Action : Docker Secrets (swarm) ou HashiCorp Vault
-- Amélioration immédiate : vérifier que `.env` est dans `.gitignore` + utiliser les GitHub Secrets pour le CI
+**Correction :** Dans `docker-compose.yml`, ne pas démarrer le service `phpmyadmin` en production. En preprod, restreindre via nginx :
+```nginx
+location /phpmyadmin {
+    allow 1.2.3.4;   # IP autorisée uniquement
+    deny all;
+}
+```
 
-**🟠 HAUTE — Rate limiting absent**
-- Risque : brute force sur `/api/login`, DDoS sur `/api/products`
-- Action : `Symfony RateLimiter` (composant natif Symfony 5.2+) ou Nginx `limit_req_zone`
-- Config Symfony : `config/packages/rate_limiter.yaml`
+### R2 — Rate Limiting sur `/login` (HAUTE)
 
-**🟠 HAUTE — TTL JWT trop long**
-- Risque : JWT volé (man-in-the-middle, XSS) → accès pendant toute la durée de vie du token
-- Action : TTL = 15min + refresh token endpoint (`/api/token/refresh`)
-- Lexik JWT Bundle : `config/packages/lexik_jwt_authentication.yaml` → `token_ttl: 900`
+**Risque concret :** Sans limite, un attaquant peut envoyer 10 000 requêtes/seconde sur `/login` pour deviner les mots de passe (brute force) ou saturer le serveur (DDoS applicatif).
 
----
+**Correction Symfony :**
+```yaml
+# config/packages/rate_limiter.yaml
+login_limiter:
+    policy: fixed_window
+    limit: 5
+    interval: '1 minute'
+```
+→ 5 tentatives de login par minute par IP → bloqué au-delà.
 
-## 10. Sylius — E-commerce Modulaire
+### R3 — Cache sur CatalogueService (HAUTE — identifié par k6)
 
-### Pourquoi Sylius pour la V3 ?
-- Architecture Symfony native → compatible avec le code existant
-- API Platform intégrée → headless e-commerce (React frontend)
-- Bundles modulaires : panier, commandes, inventaire, fanzine subscription
-- Adapté aux déploiements Docker/Kubernetes (contrairement à PrestaShop monolithique)
+**Problème observé :** À chaque requête `GET /product`, Symfony appelle la base MySQL pour récupérer la liste. Sous charge (100 VUs), chaque VU fait cette requête → MySQL reçoit 100 requêtes simultanées → saturation.
 
-### Fonctionnalités V3 ciblées
-- Catalogue produits (figurines, films, fanzines)
-- Panier et commandes
-- Abonnements fanzine (paper + digital)
-- E-reader intégré pour fanzines digitaux (accès authentifié)
-- Système de recommandations (filtrage collaboratif)
+**Correction :** Mettre en cache la liste des produits (TTL 60s) :
+```php
+$products = $this->cache->get('catalogue_available', function(ItemInterface $item) {
+    $item->expiresAfter(60);
+    return $this->service->filterAvailableProducts($this->repository->findAll());
+});
+```
+→ 100 VUs → 1 seule requête MySQL par minute au lieu de 100/seconde.
 
 ---
 
 ## CHECKLIST DE RÉVISION FINALE
 
-### 3 jours avant le passage
+### J-3
+- [ ] Revoir les 4 indicateurs ISO 25010 + leur outil + leur justification
+- [ ] Être capable d'expliquer chaque test (ce qu'il teste et pourquoi c'est un test unitaire ou fonctionnel)
+- [ ] Connaître le scénario k6 (stages, thresholds, CSRF)
+- [ ] Préparer la démo 5 fois minimum
 
-- [ ] Revoir les 4 indicateurs ISO 25010 et leur justification
-- [ ] Être capable d'expliquer chaque job du ci.yml
-- [ ] Connaître la structure d'un JWT (header.payload.signature)
-- [ ] Préparer la démo en conditions réelles (5 fois minimum)
-- [ ] Enregistrer la vidéo de backup
+### Veille
+- [ ] Pipeline vert sur `déploiement-fonctionnelle`
+- [ ] Tous les onglets préparés
+- [ ] Vidéo de backup enregistrée
 
-### La veille
-
-- [ ] Vérifier que le pipeline est vert sur `déploiement-fonctionnelle`
-- [ ] Préparer tous les onglets navigateur
-- [ ] Tester les 3 appels API dans Postman
-- [ ] Réviser les questions jury probables (sections ci-dessus)
-
-### Le jour J
-
-- [ ] Arriver avec 15 min d'avance
+### Jour J
 - [ ] Tester la connexion réseau sur site
-- [ ] Avoir les backups (vidéo + screenshots) accessibles hors connexion
+- [ ] Vidéos de backup accessibles hors ligne
 
 ---
 
 ## VOCABULAIRE TECHNIQUE À MAÎTRISER
 
-| Terme | Définition courte |
-|-------|------------------|
-| SAST | Static Application Security Testing — analyse du code source sans exécution |
-| DAST | Dynamic Application Security Testing — test sur l'application déployée |
-| HPA | Horizontal Pod Autoscaler — scaling automatique K8s basé sur les métriques |
-| TTL | Time To Live — durée de validité d'un token/cache |
-| VU | Virtual User — utilisateur simulé dans un test de charge k6 |
-| p95/p99 | 95e/99e percentile de latence — 95% des requêtes sont sous X ms |
-| CVE | Common Vulnerabilities and Exposures — identifiant de vulnérabilité |
+| Terme | Définition |
+|-------|-----------|
+| SAST | Static Application Security Testing — analyse code source sans exécution |
+| Quality Gate | Seuil SonarQube au-delà duquel le pipeline échoue |
+| Coverage | % du code couvert par les tests (lignes, branches) |
+| Mock | Objet de remplacement qui simule un collaborateur dans les tests unitaires |
+| WebTestCase | Classe Symfony pour tester les routes HTTP sans serveur réel |
+| HPA | Horizontal Pod Autoscaler — scaling automatique K8s |
+| VU | Virtual User — utilisateur simulé dans k6 |
+| p95 | 95e percentile de latence : 95% des requêtes répondent en X ms ou moins |
+| p99 | 99e percentile — plus strict, élimine presque tous les outliers |
+| CSRF | Cross-Site Request Forgery — attaque par fausse requête, protégée par token |
+| Session | Authentification côté serveur, identifiant stocké dans un cookie PHPSESSID |
+| PHP-FPM | FastCGI Process Manager — exécute PHP séparement de nginx |
+| Alpine | Distribution Linux minimale (~5MB), réduit la surface d'attaque Docker |
+| Fixtures | Données de test insérées en BDD avant les tests fonctionnels |
+| Webhook | Appel HTTP automatique déclenché par un événement externe |
 | PVC | Persistent Volume Claim — stockage persistant dans Kubernetes |
-| Ingress | Contrôleur de routage HTTP dans Kubernetes |
-| Shift Left | Approche DevSecOps : intégrer la sécurité le plus tôt possible dans le cycle |
-| Code smell | Indicateur de problème de conception (pas un bug, mais une mauvaise pratique) |
-| Technical debt | Coût futur lié aux mauvais choix actuels de développement |
-| Stateless | Sans état serveur — chaque requête porte toutes les infos nécessaires (JWT) |
-| ORM | Object-Relational Mapping — abstraction BDD (Doctrine dans Symfony) |
-| Fixtures | Données de test insérées en BDD pour les tests automatisés |
-| Webhook | Appel HTTP automatique déclenché par un événement (déploiement Coolify) |
+| Rolling update | Mise à jour K8s sans downtime (nouveaux pods créés avant suppression des anciens) |
+| Technical debt | Coût futur des mauvais choix actuels (code smells non corrigés, zones non testées) |
