@@ -26,14 +26,15 @@ final class ProductController extends AbstractController
         // US-01 — filtre stock > 0 via CatalogueService (9 tests unitaires)
         $products = $this->catalogueService->filterAvailableProducts($all);
 
-        // Filtre catégorie optionnel
-        $category = $request->query->get('category');
-        if ($category) {
+        // Filtre catégorie optionnel — getString() garantit string, jamais null
+        $category = $request->query->getString('category') ?: null;
+        if ($category !== null) {
             $products = $this->catalogueService->filterByCategory($products, $category);
         }
 
         // Tri par prix optionnel
-        if ($request->query->get('sort') === 'price_asc') {
+        $sort = $request->query->getString('sort') ?: null;
+        if ($sort === 'price_asc') {
             $products = $this->catalogueService->sortByPriceAsc($products);
         }
 
@@ -43,10 +44,10 @@ final class ProductController extends AbstractController
             : [];
 
         return $this->render('product/index.html.twig', [
-            'products'        => $products,
-            'recommended'     => $recommended,
-            'activeCategory'  => $category,
-            'activeSort'      => $request->query->get('sort'),
+            'products'       => $products,
+            'recommended'    => $recommended,
+            'activeCategory' => $category,
+            'activeSort'     => $sort,
         ]);
     }
 }
