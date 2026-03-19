@@ -194,7 +194,6 @@
     <li><a href="{{ path('app_home') }}">Accueil</a></li>
     <li><a href="{{ path('app_product_index') }}">Catalogue</a></li>
     {% if app.user %}
-      <li><a href="{{ path('admin') }}">Dashboard</a></li>
       <li>
         <a href="{{ path('app_logout') }}" class="btn-nav-logout">
           👤 {{ app.user.email }} — Déconnexion
