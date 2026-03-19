@@ -541,17 +541,22 @@
   <p class="section-desc">Une sélection de nos articles les plus appréciés, disponibles en magasin et bientôt en ligne.</p>
 
   <div class="products-grid">
-    {% set categoryImages = {
-      'figurines': 'https://picsum.photos/seed/horror-figurine/400/250',
-      'blu-ray':   'https://picsum.photos/seed/horror-bluray/400/250',
-      'fanzine':   'https://picsum.photos/seed/horror-fanzine/400/250',
-      'jeux':      'https://picsum.photos/seed/horror-game/400/250'
+    {% set productImages = {
+      1: 'https://m.media-amazon.com/images/I/61Kz3ekWDlL.jpg',
+      2: 'https://picsum.photos/seed/frankenstein-figurine/400/250',
+      3: 'https://picsum.photos/seed/the-thing-bluray/400/250',
+      4: 'https://picsum.photos/seed/suspiria-bluray/400/250',
+      5: 'https://media.ulule.com/presales/1/5/4/7/1/2/217451/ulule-mag---poster-3.MS0zWYnK84.png',
+      6: 'https://picsum.photos/seed/fanzine-fantasy/400/250',
+      7: 'https://picsum.photos/seed/horror-express-game/400/250',
+      8: 'https://picsum.photos/seed/cthulhu-wars-game/400/250'
     } %}
+
     {% for product in products %}
     <a href="{{ path('app_product_index') }}" class="card-link">
       <div class="card">
         <img
-          src="{{ categoryImages[product.category] ?? 'https://picsum.photos/seed/horror/400/250' }}"
+          src="{{ productImages[product.id] ?? 'https://picsum.photos/seed/horror/400/250' }}"
           alt="{{ product.name }}"
           class="card-img"
           loading="lazy"

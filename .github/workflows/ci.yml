@@ -15,7 +15,7 @@ env:
 jobs:
 
   build:
-    name: "1 — Build"
+    name: "1 - Build"
     runs-on: ubuntu-latest
 
     steps:
@@ -46,29 +46,10 @@ jobs:
           path: vendor
           key: vendor-${{ hashFiles('composer.lock') }}
 
-  security-scan:
-    name: "2 — Security Scan (SonarQube)"
+  test-unit:
+    name: "2 - Tests unitaires"
     runs-on: ubuntu-latest
     needs: build
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run SonarQube static analysis
-        uses: sonarsource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://demo-sonarcube.dev.fabdevlab.fr
-        with:
-          args: >
-            -Dsonar.projectKey=Demo-symfony
-            -Dsonar.sources=src
-            -Dsonar.tests=tests
-
-  test-unit:
-    name: "3 — Unit Tests"
-    runs-on: ubuntu-latest
-    needs: security-scan
 
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +77,7 @@ jobs:
         run: php vendor/bin/phpunit --testsuite=unit --testdox
 
   test-functional:
-    name: "4 — Functional Tests (Catalogue + Auth)"
+    name: "3 - Tests fonctionnels (Catalogue + Auth)"
     runs-on: ubuntu-latest
     needs: test-unit
 
@@ -170,10 +151,46 @@ jobs:
             --coverage-clover coverage.xml \
             --log-junit test-report.xml
 
-  non-regression-pre:
-    name: "5 — Non-Régression Pré-Deploy (baseline)"
+      - name: Upload coverage and test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            coverage.xml
+            test-report.xml
+          retention-days: 1
+
+  security-scan:
+    name: "4 - Sécurité & Qualité (SonarQube)"
     runs-on: ubuntu-latest
-    needs: test-functional
+    needs: test-functional 
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download test reports
+        uses: actions/download-artifact@v4
+        with:
+          name: test-reports
+          path: .
+
+      - name: Run SonarQube analysis with coverage
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://demo-sonarcube.dev.fabdevlab.fr
+        with:
+          args: >
+            -Dsonar.projectKey=Demo-symfony
+            -Dsonar.sources=src
+            -Dsonar.tests=tests
+            -Dsonar.php.coverage.reportPaths=coverage.xml
+            -Dsonar.php.tests.reportPath=test-report.xml
+
+  non-regression-pre:
+    name: "5 — Vérification AVANT déploiement"
+    runs-on: ubuntu-latest
+    needs: security-scan 
     if: github.event_name == 'push'
 
     steps:
@@ -193,7 +210,7 @@ jobs:
           if [ "$status" -ne 302 ]; then exit 1; fi
 
   deploy:
-    name: "6 — Deploy Preprod (Coolify)"
+    name: "6 — Déploiement sur preprod (Coolify)"
     runs-on: ubuntu-latest
     needs: non-regression-pre
 
@@ -205,7 +222,7 @@ jobs:
             --fail --silent --show-error
 
   non-regression-post:
-    name: "7 — Non-Régression Post-Deploy"
+    name: "7 — Vérification APRÈS déploiement"
     runs-on: ubuntu-latest
     needs: deploy
 
@@ -229,7 +246,7 @@ jobs:
           if [ "$status" -ne 302 ]; then exit 1; fi
 
   load-test:
-    name: "8 — Load Tests (K6 → Grafana Cloud)"
+    name: "8 — Test de charge (K6 → Grafana Cloud)"
     runs-on: ubuntu-latest
     needs: non-regression-post
 
