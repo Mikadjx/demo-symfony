@@ -9,12 +9,12 @@
         <div style="background: #1a1a1a; border: 1px solid #8b0000; border-radius: 8px; padding: 1.5rem; text-align: center;">
             <div style="font-size: 2.5rem;">🧟</div>
             <h3 style="color: #fff; margin: 0.5rem 0;">Produits</h3>
-            <a href="{{ path('admin_product_index') }}" style="color: #cc0000;">Gérer →</a>
+            <a href="{{ ea_url().setController('App\\Controller\\Admin\\ProductCrudController').generateUrl() }}" style="color: #cc0000;">Gérer →</a>
         </div>
         <div style="background: #1a1a1a; border: 1px solid #8b0000; border-radius: 8px; padding: 1.5rem; text-align: center;">
             <div style="font-size: 2.5rem;">👤</div>
             <h3 style="color: #fff; margin: 0.5rem 0;">Utilisateurs</h3>
-            <a href="{{ path('admin_user_index') }}" style="color: #cc0000;">Gérer →</a>
+            <a href="{{ ea_url().setController('App\\Controller\\Admin\\UserCrudController').generateUrl() }}" style="color: #cc0000;">Gérer →</a>
         </div>
         <div style="background: #1a1a1a; border: 1px solid #8b0000; border-radius: 8px; padding: 1.5rem; text-align: center;">
             <div style="font-size: 2.5rem;">🌐</div>

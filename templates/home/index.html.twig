@@ -169,6 +169,16 @@
     box-shadow: 0 10px 30px rgba(139,0,0,0.15);
   }
 
+  .card-img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 2px;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    display: block;
+  }
+
   .card-category {
     font-family: 'Cinzel Decorative', serif;
     font-size: 0.6rem;
@@ -531,9 +541,21 @@
   <p class="section-desc">Une sélection de nos articles les plus appréciés, disponibles en magasin et bientôt en ligne.</p>
 
   <div class="products-grid">
+    {% set categoryImages = {
+      'figurines': 'https://picsum.photos/seed/horror-figurine/400/250',
+      'blu-ray':   'https://picsum.photos/seed/horror-bluray/400/250',
+      'fanzine':   'https://picsum.photos/seed/horror-fanzine/400/250',
+      'jeux':      'https://picsum.photos/seed/horror-game/400/250'
+    } %}
     {% for product in products %}
     <a href="{{ path('app_product_index') }}" class="card-link">
       <div class="card">
+        <img
+          src="{{ categoryImages[product.category] ?? 'https://picsum.photos/seed/horror/400/250' }}"
+          alt="{{ product.name }}"
+          class="card-img"
+          loading="lazy"
+        >
         <div class="card-category">{{ product.category }}</div>
         <h3 class="card-title">{{ product.name }}</h3>
         <p class="card-desc">{{ product.description }}</p>
