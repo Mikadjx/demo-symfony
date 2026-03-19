@@ -68,13 +68,24 @@ jobs:
           path: vendor
           key: vendor-${{ hashFiles('composer.lock') }}
 
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         env:
           APP_ENV: test
           APP_SECRET: test-secret-for-ci
           DEFAULT_URI: ${{ env.DEFAULT_URI }}
           DATABASE_URL: ${{ env.DATABASE_URL }}
-        run: php vendor/bin/phpunit --testsuite=unit --testdox
+        run: |
+          php -d memory_limit=512M vendor/bin/phpunit \
+            --testsuite=unit \
+            --testdox \
+            --coverage-clover coverage-unit.xml
+
+      - name: Upload unit coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage-unit.xml
+          retention-days: 1
 
   test-functional:
     name: "3 - Tests fonctionnels (Catalogue + Auth)"
@@ -114,6 +125,12 @@ jobs:
           path: vendor
           key: vendor-${{ hashFiles('composer.lock') }}
 
+      - name: Download unit coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+          path: .
+
       - name: Run database migrations
         env:
           APP_ENV: test
@@ -148,8 +165,21 @@ jobs:
           php -d memory_limit=512M vendor/bin/phpunit \
             --testsuite=functional \
             --testdox \
-            --coverage-clover coverage.xml \
+            --coverage-clover coverage-functional.xml \
             --log-junit test-report.xml
+
+      - name: Merge coverage reports
+        run: |
+          php -r "
+            \$unit = simplexml_load_file('coverage-unit.xml');
+            \$func = simplexml_load_file('coverage-functional.xml');
+            foreach(\$func->project->package as \$pkg) {
+              \$dom = dom_import_simplexml(\$unit->project);
+              \$node = dom_import_simplexml(\$pkg);
+              \$dom->appendChild(\$dom->ownerDocument->importNode(\$node, true));
+            }
+            \$unit->asXML('coverage.xml');
+          "
 
       - name: Upload coverage and test reports
         uses: actions/upload-artifact@v4
@@ -163,7 +193,7 @@ jobs:
   security-scan:
     name: "4 - Sécurité & Qualité (SonarQube)"
     runs-on: ubuntu-latest
-    needs: test-functional 
+    needs: test-functional
 
     steps:
       - uses: actions/checkout@v4
@@ -190,7 +220,7 @@ jobs:
   non-regression-pre:
     name: "5 — Vérification AVANT déploiement"
     runs-on: ubuntu-latest
-    needs: security-scan 
+    needs: security-scan
     if: github.event_name == 'push'
 
     steps:
