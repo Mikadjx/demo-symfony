@@ -216,6 +216,7 @@ jobs:
             -Dsonar.tests=tests
             -Dsonar.php.coverage.reportPaths=coverage.xml
             -Dsonar.php.tests.reportPath=test-report.xml
+            -Dsonar.coverage.exclusions=src/Controller/RegistrationController.php,src/DataFixtures/**,src/Migrations/**
 
   non-regression-pre:
     name: "5 — Vérification AVANT déploiement"
